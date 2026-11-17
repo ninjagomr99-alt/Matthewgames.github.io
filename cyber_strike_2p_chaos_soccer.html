@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER STRIKE 2P // Chaos Arcade Soccer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@600;800;900&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #050814;
+            color: #f8fafc;
+            overflow: hidden;
+            user-select: none;
+        }
+        .arcade-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        .cyber-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        canvas {
+            box-shadow: 0 0 40px rgba(6, 182, 212, 0.25), 0 0 80px rgba(236, 72, 153, 0.15);
+            border: 3px solid #1e293b;
+            background: #070d19;
+        }
+        .neon-cyan {
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8), 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+        .neon-pink {
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.8), 0 0 20px rgba(244, 63, 94, 0.4);
+        }
+        .neon-gold {
+            text-shadow: 0 0 12px rgba(250, 204, 21, 0.85);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center p-2 md:p-4">
+
+    <!-- Top Compact HUD -->
+    <div id="hud" class="w-full max-w-[1000px] flex justify-between items-center bg-slate-950/90 border border-slate-800 px-4 py-2 rounded-t-2xl shadow-xl z-10">
+        <!-- Player 1 HUD -->
+        <div class="flex items-center space-x-3 w-1/3">
+            <div class="w-4 h-4 rounded-full bg-cyan-400 shadow-[0_0_12px_#22d3ee]"></div>
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="cyber-font text-xs md:text-sm font-black text-cyan-400 tracking-wider">P1 CYAN</span>
+                    <span id="p1Badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse"></span>
+                </div>
+                <div class="flex items-center space-x-2 mt-0.5">
+                    <span id="p1Score" class="arcade-font text-xl md:text-2xl text-white neon-cyan">0</span>
+                    <!-- Boost Bar -->
+                    <div class="w-20 md:w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div id="p1BoostBar" class="h-full bg-gradient-to-r from-cyan-500 to-sky-300 transition-all duration-75" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Status / Mode / Timer -->
+        <div class="flex flex-col items-center justify-center w-1/3">
+            <div class="flex items-center space-x-2">
+                <span id="modeLabel" class="cyber-font text-[10px] text-slate-400 uppercase tracking-widest">FIRST TO 5</span>
+            </div>
+            <div id="matchTimer" class="arcade-font text-base md:text-xl text-yellow-400 neon-gold my-0.5">00:00</div>
+            <div id="activeGlobalEvent" class="h-4 text-[10px] cyber-font font-bold text-amber-300 tracking-wider uppercase"></div>
+        </div>
+
+        <!-- Player 2 HUD & Controls -->
+        <div class="flex items-center justify-end space-x-3 w-1/3 text-right">
+            <div>
+                <div class="flex items-center justify-end space-x-2">
+                    <span id="p2Badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-400/50 animate-pulse"></span>
+                    <span class="cyber-font text-xs md:text-sm font-black text-rose-400 tracking-wider">P2 MAGENTA</span>
+                </div>
+                <div class="flex items-center justify-end space-x-2 mt-0.5">
+                    <!-- Boost Bar -->
+                    <div class="w-20 md:w-28 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                        <div id="p2BoostBar" class="h-full bg-gradient-to-l from-rose-500 to-amber-400 transition-all duration-75 ml-auto" style="width: 100%"></div>
+                    </div>
+                    <span id="p2Score" class="arcade-font text-xl md:text-2xl text-white neon-pink">0</span>
+                </div>
+            </div>
+            <div class="w-4 h-4 rounded-full bg-rose-500 shadow-[0_0_12px_#f43f5e]"></div>
+
+            <!-- Utility Buttons -->
+            <div class="flex flex-col space-y-1 pl-2 border-l border-slate-800">
+                <button id="muteBtn" title="Toggle Sound" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-2 py-1 rounded border border-slate-600 transition">
+                    🔊
+                </button>
+                <button id="menuBtn" title="Menu / Reset" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] cyber-font px-2 py-1 rounded border border-slate-600 transition">
+                    MENU
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Arena Wrapper -->
+    <div class="relative w-full max-w-[1000px] flex-1 max-h-[580px] flex items-center justify-center">
+        <canvas id="gameCanvas" width="1000" height="560" class="w-full h-full object-contain rounded-b-2xl"></canvas>
+
+        <!-- Goal Flash Banner -->
+        <div id="goalBanner" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-0 scale-75 transition-all duration-200 z-10">
+            <div id="goalText" class="arcade-font text-4xl md:text-6xl text-yellow-300 drop-shadow-[0_0_25px_rgba(250,204,21,0.9)] bg-slate-950/80 px-8 py-4 rounded-2xl border-4 border-yellow-400">
+                MEGA GOAL!
+            </div>
+            <div id="goalSubtext" class="cyber-font text-sm md:text-lg font-bold text-white mt-2 tracking-widest uppercase bg-black/70 px-4 py-1 rounded-full">
+                SUPERSONIC STRIKE
+            </div>
+        </div>
+
+        <!-- Start / Mode Select Overlay -->
+        <div id="startScreen" class="absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center p-4 md:p-6 rounded-b-2xl z-20 overflow-y-auto">
+            <h1 class="cyber-font text-2xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-yellow-300 to-rose-500 tracking-wider mb-1 text-center">
+                CYBER STRIKE 2P
+            </h1>
+            <p class="text-xs md:text-sm text-slate-400 mb-4 text-center">Rocket Boosts • Flip Power-Shots • Pinball Bumpers • Chaos Orbs</p>
+
+            <!-- Controls Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4 w-full max-w-3xl">
+                <!-- P1 Controls -->
+                <div class="bg-slate-900/90 border border-cyan-500/40 p-3 md:p-4 rounded-xl shadow-[0_0_20px_rgba(34,211,238,0.1)]">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="cyber-font text-sm font-black text-cyan-400">PLAYER 1 (CYAN)</h3>
+                        <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></span>
+                    </div>
+                    <div class="space-y-1 text-xs md:text-sm text-slate-300">
+                        <p><span class="inline-block w-24 font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-center mr-2">W A S D</span> Steer / Drive</p>
+                        <p><span class="inline-block w-24 font-bold text-cyan-300 bg-slate-800 px-2 py-0.5 rounded border border-cyan-800 text-center mr-2">SPACE</span> Rocket Boost</p>
+                        <p><span class="inline-block w-24 font-bold text-yellow-300 bg-slate-800 px-2 py-0.5 rounded border border-yellow-700 text-center mr-2">E / F</span> Flip-Dash & Power Shot</p>
+                    </div>
+                </div>
+
+                <!-- P2 Controls -->
+                <div class="bg-slate-900/90 border border-rose-500/40 p-3 md:p-4 rounded-xl shadow-[0_0_20px_rgba(244,63,94,0.1)]">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="cyber-font text-sm font-black text-rose-400">PLAYER 2 (MAGENTA)</h3>
+                        <span class="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+                    </div>
+                    <div class="space-y-1 text-xs md:text-sm text-slate-300">
+                        <p><span class="inline-block w-24 font-bold text-white bg-slate-800 px-2 py-0.5 rounded border border-slate-700 text-center mr-2">ARROWS</span> Steer / Drive</p>
+                        <p><span class="inline-block w-24 font-bold text-rose-300 bg-slate-800 px-2 py-0.5 rounded border border-rose-800 text-center mr-2">SHIFT / M</span> Rocket Boost</p>
+                        <p><span class="inline-block w-24 font-bold text-yellow-300 bg-slate-800 px-2 py-0.5 rounded border border-yellow-700 text-center mr-2">ENTER / L</span> Flip-Dash & Power Shot</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Power-ups Legend -->
+            <div class="flex flex-wrap justify-center gap-2 mb-5 max-w-3xl text-[11px] font-bold">
+                <span class="px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-400/40">❄️ FREEZE FOE</span>
+                <span class="px-2.5 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-400/40">🌕 GIANT BALL</span>
+                <span class="px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/40">✨ MULTIBALL</span>
+                <span class="px-2.5 py-1 rounded-full bg-red-500/20 text-red-300 border border-red-400/40">🔥 COMET MODE</span>
+                <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">🥅 BIG ENEMY GOAL</span>
+            </div>
+
+            <!-- Game Mode Selector -->
+            <div class="flex items-center space-x-2 mb-5 bg-slate-900 p-1.5 rounded-xl border border-slate-800">
+                <button data-mode="goals5" class="mode-btn px-3 py-1.5 rounded-lg text-xs cyber-font font-bold bg-cyan-500 text-slate-950 transition">FIRST TO 5</button>
+                <button data-mode="goals7" class="mode-btn px-3 py-1.5 rounded-lg text-xs cyber-font font-bold text-slate-400 hover:text-white transition">FIRST TO 7</button>
+                <button data-mode="timed120" class="mode-btn px-3 py-1.5 rounded-lg text-xs cyber-font font-bold text-slate-400 hover:text-white transition">2-MIN CHAOS</button>
+            </div>
+
+            <button id="startBtn" class="arcade-font bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-300 hover:to-amber-400 text-slate-950 text-sm md:text-lg px-10 py-4 rounded-xl font-black shadow-[0_5px_0_#b45309,0_0_25px_rgba(250,204,21,0.5)] active:translate-y-1 transition-all cursor-pointer">
+                KICK OFF!
+            </button>
+        </div>
+
+        <!-- Winner / Game Over Overlay -->
+        <div id="gameOverScreen" class="hidden absolute inset-0 bg-slate-950/92 backdrop-blur-md flex flex-col items-center justify-center p-6 rounded-b-2xl z-20">
+            <div class="cyber-font text-xs text-yellow-400 tracking-widest uppercase mb-2">MATCH COMPLETE</div>
+            <h2 id="winnerText" class="arcade-font text-2xl md:text-4xl text-white mb-3 text-center leading-relaxed">PLAYER 1 WINS!</h2>
+            <p id="finalScoreText" class="cyber-font text-xl md:text-2xl font-bold text-slate-300 mb-8">5 - 3</p>
+            <div class="flex space-x-4">
+                <button id="restartBtn" class="arcade-font bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs md:text-sm px-7 py-4 rounded-xl font-bold shadow-[0_5px_0_#047857] active:translate-y-1 transition-all cursor-pointer">
+                    REMATCH
+                </button>
+                <button id="backToMenuBtn" class="arcade-font bg-slate-700 hover:bg-slate-600 text-white text-xs md:text-sm px-6 py-4 rounded-xl font-bold shadow-[0_5px_0_#334155] active:translate-y-1 transition-all cursor-pointer">
+                    MODES
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. SYNTHESIZED WEB AUDIO SOUND ENGINE
+        // ==========================================
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.lastBoostSound = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playTone(freq, endFreq, duration, type = 'sine', vol = 0.15) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+                if (endFreq) {
+                    osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+                }
+                gain.gain.setValueAtTime(vol, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+
+            playBoost() {
+                if (this.muted || !this.ctx) return;
+                const now = performance.now();
+                if (now - this.lastBoostSound < 90) return;
+                this.lastBoostSound = now;
+                this.playTone(110 + Math.random() * 40, 65, 0.12, 'sawtooth', 0.06);
+            }
+
+            playFlip() {
+                this.playTone(260, 680, 0.18, 'triangle', 0.18);
+            }
+
+            playKick(power = 1) {
+                const freq = power > 1.3 ? 190 : 140;
+                this.playTone(freq, 45, 0.16, 'square', Math.min(0.25, 0.12 * power));
+            }
+
+            playBumper() {
+                this.playTone(440, 880, 0.15, 'sine', 0.2);
+                setTimeout(() => this.playTone(660, 1100, 0.12, 'triangle', 0.15), 40);
+            }
+
+            playPad() {
+                this.playTone(520, 920, 0.14, 'sine', 0.12);
+            }
+
+            playPowerup() {
+                this.playTone(400, 600, 0.09, 'square', 0.14);
+                setTimeout(() => this.playTone(600, 900, 0.12, 'square', 0.14), 75);
+                setTimeout(() => this.playTone(900, 1250, 0.18, 'triangle', 0.16), 150);
+            }
+
+            playFreeze() {
+                this.playTone(1200, 300, 0.35, 'sawtooth', 0.18);
+            }
+
+            playGoal() {
+                if (this.muted || !this.ctx) return;
+                // Bass explosion + stadium horn chord
+                this.playTone(130, 35, 0.7, 'sawtooth', 0.3);
+                this.playTone(261.63, 261.63, 0.65, 'square', 0.14);
+                this.playTone(329.63, 329.63, 0.65, 'square', 0.14);
+                this.playTone(392.00, 392.00, 0.65, 'square', 0.14);
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        // ==========================================
+        // 2. CANVAS & GAME STATE SETUP
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const W = 1000;
+        const H = 560;
+        const MARGIN = 36;
+
+        // UI References
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const backToMenuBtn = document.getElementById('backToMenuBtn');
+        const menuBtn = document.getElementById('menuBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const p1ScoreEl = document.getElementById('p1Score');
+        const p2ScoreEl = document.getElementById('p2Score');
+        const p1BoostBar = document.getElementById('p1BoostBar');
+        const p2BoostBar = document.getElementById('p2BoostBar');
+        const p1Badge = document.getElementById('p1Badge');
+        const p2Badge = document.getElementById('p2Badge');
+        const matchTimerEl = document.getElementById('matchTimer');
+        const modeLabelEl = document.getElementById('modeLabel');
+        const activeGlobalEventEl = document.getElementById('activeGlobalEvent');
+        const goalBanner = document.getElementById('goalBanner');
+        const goalText = document.getElementById('goalText');
+        const goalSubtext = document.getElementById('goalSubtext');
+        const winnerText = document.getElementById('winnerText');
+        const finalScoreText = document.getElementById('finalScoreText');
+
+        // Game Mode State
+        let selectedMode = 'goals5'; // 'goals5', 'goals7', 'timed120'
+        let targetGoals = 5;
+        let gameRunning = false;
+        let isGoalPause = false;
+        let matchSeconds = 0;
+        let lastTime = 0;
+        let hitStopFrames = 0;
+
+        // Camera Shake
+        const camera = { shake: 0, x: 0, y: 0 };
+
+        // Scores
+        const scores = { p1: 0, p2: 0 };
+
+        // Goals State (supports dynamic resizing via power-up)
+        const goals = {
+            leftWidth: 145,
+            rightWidth: 145,
+            baseWidth: 145,
+            depth: 26,
+            leftBigTimer: 0,
+            rightBigTimer: 0
+        };
+
+        // Pinball Bumpers
+        const bumpers = [
+            { x: W / 2, y: 155, radius: 28, pulse: 0, color: '#a855f7', glow: '#d8b4fe' },
+            { x: W / 2, y: H - 155, radius: 28, pulse: 0, color: '#a855f7', glow: '#d8b4fe' }
+        ];
+
+        // Rocket League Boost Pads
+        const boostPads = [
+            { x: 95, y: 85, active: true, timer: 0, big: true },
+            { x: 95, y: H - 85, active: true, timer: 0, big: true },
+            { x: W - 95, y: 85, active: true, timer: 0, big: true },
+            { x: W - 95, y: H - 85, active: true, timer: 0, big: true },
+            { x: W / 2, y: 72, active: true, timer: 0, big: false },
+            { x: W / 2, y: H - 72, active: true, timer: 0, big: false }
+        ];
+
+        // Power-Up Orbs
+        const POWERUP_TYPES = [
+            { id: 'FREEZE', label: '❄️ FREEZE', color: '#38bdf8', icon: '❄️' },
+            { id: 'GIANT_BALL', label: '🌕 GIANT BALL', color: '#facc15', icon: '🌕' },
+            { id: 'MULTIBALL', label: '✨ MULTIBALL', color: '#c084fc', icon: '✨' },
+            { id: 'COMET', label: '🔥 COMET MODE', color: '#fb7185', icon: '🔥' },
+            { id: 'BIG_GOAL', label: '🥅 BIG GOAL', color: '#34d399', icon: '🥅' }
+        ];
+        let powerupOrbs = [];
+        let powerupSpawnTimer = 4.5;
+        let giantBallTimer = 0;
+
+        // Visual FX Arrays
+        let particles = [];
+        let shockwaves = [];
+        let floatingTexts = [];
+
+        // Player Factory
+        function createPlayer(id, x, y, color, secondaryColor, angle) {
+            return {
+                id,
+                x,
+                y,
+                vx: 0,
+                vy: 0,
+                radius: 22,
+                angle,
+                color,
+                secondaryColor,
+                boost: 100,
+                isBoosting: false,
+                flipTimer: 0,
+                flipCooldown: 0,
+                flipDirX: 0,
+                flipDirY: 0,
+                spinAngle: 0,
+                frozenTimer: 0,
+                cometTimer: 0
+            };
+        }
+
+        const p1 = createPlayer('p1', 220, H / 2, '#22d3ee', '#0284c7', 0);
+        const p2 = createPlayer('p2', W - 220, H / 2, '#f43f5e', '#be123c', Math.PI);
+
+        // Balls Array (Supports Main Ball + Multiball)
+        let balls = [];
+
+        function createBall(x, y, isBonus = false) {
+            return {
+                x,
+                y,
+                vx: 0,
+                vy: 0,
+                baseRadius: isBonus ? 12 : 14,
+                radius: isBonus ? 12 : 14,
+                isBonus,
+                lifeTimer: isBonus ? 13 : Infinity,
+                trail: [],
+                lastTouchedBy: null
+            };
+        }
+
+        // ==========================================
+        // 3. INPUT HANDLING
+        // ==========================================
+        const keys = {};
+
+        window.addEventListener('keydown', (e) => {
+            const code = e.code;
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(code)) {
+                e.preventDefault();
+            }
+            if (!keys[code]) {
+                keys[code] = true;
+                if (gameRunning && !isGoalPause) {
+                    // Player 1 Flip / Power Shot
+                    if (code === 'KeyE' || code === 'KeyF') triggerFlip(p1);
+                    // Player 2 Flip / Power Shot
+                    if (code === 'Enter' || code === 'KeyL' || code === 'Slash') triggerFlip(p2);
+                }
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        // Mode Selection Buttons
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('bg-cyan-500', 'text-slate-950');
+                    b.classList.add('text-slate-400');
+                });
+                btn.classList.add('bg-cyan-500', 'text-slate-950');
+                btn.classList.remove('text-slate-400');
+                selectedMode = btn.dataset.mode;
+            });
+        });
+
+        startBtn.addEventListener('click', () => {
+            sfx.init();
+            startMatch();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            sfx.init();
+            startMatch();
+        });
+
+        const returnToMenu = () => {
+            gameRunning = false;
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        };
+
+        backToMenuBtn.addEventListener('click', returnToMenu);
+        menuBtn.addEventListener('click', returnToMenu);
+
+        muteBtn.addEventListener('click', () => {
+            sfx.init();
+            const isMuted = sfx.toggleMute();
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        // ==========================================
+        // 4. MATCH & ENTITY RESET LOGIC
+        // ==========================================
+        function startMatch() {
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            scores.p1 = 0;
+            scores.p2 = 0;
+            p1ScoreEl.textContent = '0';
+            p2ScoreEl.textContent = '0';
+
+            if (selectedMode === 'goals5') {
+                targetGoals = 5;
+                matchSeconds = 0;
+                modeLabelEl.textContent = 'FIRST TO 5 GOALS';
+            } else if (selectedMode === 'goals7') {
+                targetGoals = 7;
+                matchSeconds = 0;
+                modeLabelEl.textContent = 'FIRST TO 7 GOALS';
+            } else {
+                targetGoals = 999;
+                matchSeconds = 120;
+                modeLabelEl.textContent = '2-MIN CHAOS';
+            }
+
+            powerupOrbs = [];
+            powerupSpawnTimer = 3.5;
+            giantBallTimer = 0;
+            goals.leftBigTimer = 0;
+            goals.rightBigTimer = 0;
+            goals.leftWidth = goals.baseWidth;
+            goals.rightWidth = goals.baseWidth;
+
+            resetPositions();
+            gameRunning = true;
+            isGoalPause = false;
+            lastTime = performance.now();
+        }
+
+        function resetPositions() {
+            p1.x = 210;
+            p1.y = H / 2;
+            p1.vx = 0;
+            p1.vy = 0;
+            p1.angle = 0;
+            p1.boost = 100;
+            p1.flipTimer = 0;
+            p1.flipCooldown = 0;
+            p1.frozenTimer = 0;
+            p1.cometTimer = 0;
+
+            p2.x = W - 210;
+            p2.y = H / 2;
+            p2.vx = 0;
+            p2.vy = 0;
+            p2.angle = Math.PI;
+            p2.boost = 100;
+            p2.flipTimer = 0;
+            p2.flipCooldown = 0;
+            p2.frozenTimer = 0;
+            p2.cometTimer = 0;
+
+            balls = [createBall(W / 2, H / 2, false)];
+
+            boostPads.forEach(pad => {
+                pad.active = true;
+                pad.timer = 0;
+            });
+        }
+
+        // ==========================================
+        // 5. ACTIONS, FLIPS & POWER-UPS
+        // ==========================================
+        function triggerFlip(p) {
+            if (p.frozenTimer > 0 || p.flipCooldown > 0) return;
+
+            p.flipTimer = 0.24;
+            p.flipCooldown = 0.85;
+            p.spinAngle = 0;
+
+            // Dash in current velocity direction or facing angle
+            const speed = Math.hypot(p.vx, p.vy);
+            if (speed > 0.6) {
+                p.flipDirX = p.vx / speed;
+                p.flipDirY = p.vy / speed;
+            } else {
+                p.flipDirX = Math.cos(p.angle);
+                p.flipDirY = Math.sin(p.angle);
+            }
+
+            p.vx = p.flipDirX * 13.5;
+            p.vy = p.flipDirY * 13.5;
+
+            sfx.playFlip();
+            spawnShockwave(p.x, p.y, p.color, 48);
+            spawnParticles(p.x, p.y, p.color, 14, 5);
+        }
+
+        function spawnPowerupOrb() {
+            const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+            // Spawn in safe midfield coordinates away from bumpers
+            const x = W / 2 + (Math.random() - 0.5) * 340;
+            const y = (Math.random() < 0.5) ? (H / 2 + (Math.random() - 0.5) * 90) : (Math.random() < 0.5 ? 85 : H - 85);
+
+            powerupOrbs.push({
+                x,
+                y,
+                radius: 19,
+                type,
+                bobPhase: Math.random() * Math.PI * 2,
+                life: 16
+            });
+            spawnShockwave(x, y, type.color, 40);
+        }
+
+        function activatePowerup(player, orb) {
+            const opponent = player.id === 'p1' ? p2 : p1;
+            const type = orb.type;
+
+            sfx.playPowerup();
+            spawnShockwave(orb.x, orb.y, type.color, 75);
+            spawnParticles(orb.x, orb.y, type.color, 25, 7);
+            addFloatingText(orb.x, orb.y - 20, type.label, type.color);
+
+            if (type.id === 'FREEZE') {
+                opponent.frozenTimer = 2.6;
+                opponent.vx *= 0.1;
+                opponent.vy *= 0.1;
+                sfx.playFreeze();
+                spawnShockwave(opponent.x, opponent.y, '#38bdf8', 70);
+                addFloatingText(opponent.x, opponent.y - 30, 'FROZEN!', '#38bdf8');
+            } else if (type.id === 'GIANT_BALL') {
+                giantBallTimer = 10;
+            } else if (type.id === 'MULTIBALL') {
+                if (balls.length < 3) {
+                    const b = createBall(W / 2, H / 2, true);
+                    b.vx = (Math.random() - 0.5) * 8;
+                    b.vy = (Math.random() < 0.5 ? -1 : 1) * 6;
+                    balls.push(b);
+                }
+            } else if (type.id === 'COMET') {
+                player.cometTimer = 5.5;
+                player.boost = 100;
+            } else if (type.id === 'BIG_GOAL') {
+                if (player.id === 'p1') {
+                    goals.rightBigTimer = 9;
+                } else {
+                    goals.leftBigTimer = 9;
+                }
+            }
+        }
+
+        // ==========================================
+        // 6. VISUAL JUICE HELPERS
+        // ==========================================
+        function addShake(amount) {
+            camera.shake = Math.min(24, camera.shake + amount);
+        }
+
+        function spawnParticles(x, y, color, count = 12, maxSpeed = 6) {
+            for (let i = 0; i < count; i++) {
+                const ang = Math.random() * Math.PI * 2;
+                const spd = 1 + Math.random() * maxSpeed;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(ang) * spd,
+                    vy: Math.sin(ang) * spd,
+                    life: 1,
+                    decay: 0.025 + Math.random() * 0.03,
+                    size: 2.5 + Math.random() * 4,
+                    color
+                });
+            }
+        }
+
+        function spawnShockwave(x, y, color, maxRadius = 80) {
+            shockwaves.push({
+                x,
+                y,
+                radius: 8,
+                maxRadius,
+                alpha: 1,
+                color
+            });
+        }
+
+        function addFloatingText(x, y, text, color = '#ffffff') {
+            floatingTexts.push({
+                x,
+                y,
+                vy: -1.4,
+                text,
+                color,
+                life: 1.1
+            });
+        }
+
+        // ==========================================
+        // 7. PHYSICS & SIMULATION UPDATE
+        // ==========================================
+        function update(dt) {
+            if (!gameRunning) return;
+
+            // Hit-stop freeze frame for massive shots
+            if (hitStopFrames > 0) {
+                hitStopFrames--;
+                return;
+            }
+
+            // Update Camera Shake
+            if (camera.shake > 0) {
+                camera.x = (Math.random() - 0.5) * camera.shake;
+                camera.y = (Math.random() - 0.5) * camera.shake;
+                camera.shake *= 0.86;
+                if (camera.shake < 0.4) {
+                    camera.shake = 0;
+                    camera.x = 0;
+                    camera.y = 0;
+                }
+            }
+
+            // Update Visual FX
+            updateFX(dt);
+
+            if (isGoalPause) return;
+
+            // Match Timer Logic
+            if (selectedMode === 'timed120') {
+                matchSeconds -= dt;
+                if (matchSeconds <= 0) {
+                    matchSeconds = 0;
+                    endMatch();
+                    return;
+                }
+            } else {
+                matchSeconds += dt;
+            }
+            updateTimerUI();
+
+            // Global Power-up Timers
+            if (giantBallTimer > 0) giantBallTimer = Math.max(0, giantBallTimer - dt);
+            if (goals.leftBigTimer > 0) goals.leftBigTimer = Math.max(0, goals.leftBigTimer - dt);
+            if (goals.rightBigTimer > 0) goals.rightBigTimer = Math.max(0, goals.rightBigTimer - dt);
+
+            goals.leftWidth += ((goals.leftBigTimer > 0 ? 225 : goals.baseWidth) - goals.leftWidth) * 0.12;
+            goals.rightWidth += ((goals.rightBigTimer > 0 ? 225 : goals.baseWidth) - goals.rightWidth) * 0.12;
+
+            // Powerup Orb Spawning
+            powerupSpawnTimer -= dt;
+            if (powerupSpawnTimer <= 0 && powerupOrbs.length < 2) {
+                spawnPowerupOrb();
+                powerupSpawnTimer = 7.5;
+            }
+
+            for (let i = powerupOrbs.length - 1; i >= 0; i--) {
+                const orb = powerupOrbs[i];
+                orb.bobPhase += dt * 4;
+                orb.life -= dt;
+                if (orb.life <= 0) {
+                    powerupOrbs.splice(i, 1);
+                }
+            }
+
+            // Boost Pads Respawn
+            boostPads.forEach(pad => {
+                if (!pad.active) {
+                    pad.timer -= dt;
+                    if (pad.timer <= 0) {
+                        pad.active = true;
+                        spawnShockwave(pad.x, pad.y, '#facc15', 26);
+                    }
+                }
+            });
+
+            // Bumper Pulse Decay
+            bumpers.forEach(b => {
+                if (b.pulse > 0) b.pulse = Math.max(0, b.pulse - dt * 5);
+            });
+
+            // Update Players
+            updatePlayer(p1, dt, {
+                up: keys['KeyW'],
+                down: keys['KeyS'],
+                left: keys['KeyA'],
+                right: keys['KeyD'],
+                boost: keys['Space']
+            });
+
+            updatePlayer(p2, dt, {
+                up: keys['ArrowUp'],
+                down: keys['ArrowDown'],
+                left: keys['ArrowLeft'],
+                right: keys['ArrowRight'],
+                boost: keys['ShiftLeft'] || keys['ShiftRight'] || keys['KeyM']
+            });
+
+            // Player vs Player Collision
+            resolvePlayerCollision(p1, p2);
+
+            // Update Balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const b = balls[i];
+                const targetRadius = (giantBallTimer > 0 ? 29 : b.baseRadius);
+                b.radius += (targetRadius - b.radius) * 0.15;
+
+                if (b.isBonus) {
+                    b.lifeTimer -= dt;
+                    if (b.lifeTimer <= 0) {
+                        spawnParticles(b.x, b.y, '#facc15', 15, 4);
+                        balls.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                const scored = updateBall(b);
+                if (scored) break;
+            }
+
+            updateBadgesUI();
+        }
+
+        function updatePlayer(p, dt, controls) {
+            if (p.flipCooldown > 0) p.flipCooldown = Math.max(0, p.flipCooldown - dt);
+            if (p.cometTimer > 0) {
+                p.cometTimer = Math.max(0, p.cometTimer - dt);
+                p.boost = 100;
+            }
+
+            // Frozen State
+            if (p.frozenTimer > 0) {
+                p.frozenTimer = Math.max(0, p.frozenTimer - dt);
+                p.vx *= 0.9;
+                p.vy *= 0.9;
+                p.x += p.vx;
+                p.y += p.vy;
+                constrainPlayerToArena(p);
+                return;
+            }
+
+            // Flip-Dash State
+            if (p.flipTimer > 0) {
+                p.flipTimer = Math.max(0, p.flipTimer - dt);
+                p.spinAngle += dt * 28;
+                p.x += p.vx;
+                p.y += p.vy;
+                spawnParticles(p.x, p.y, '#facc15', 2, 2);
+                constrainPlayerToArena(p);
+                checkPlayerPickups(p);
+                checkPlayerBumpers(p);
+                return;
+            }
+
+            // Normal Steering & Acceleration
+            let ax = 0;
+            let ay = 0;
+            if (controls.up) ay -= 1;
+            if (controls.down) ay += 1;
+            if (controls.left) ax -= 1;
+            if (controls.right) ax += 1;
+
+            if (ax !== 0 || ay !== 0) {
+                const len = Math.hypot(ax, ay);
+                ax /= len;
+                ay /= len;
+                const targetAngle = Math.atan2(ay, ax);
+                // Smooth angular rotation
+                let diff = targetAngle - p.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                p.angle += diff * 0.25;
+            }
+
+            // Rocket Boost Logic
+            p.isBoosting = controls.boost && p.boost > 1;
+            let accel = 0.58;
+            let maxSpd = 6.2;
+
+            if (p.cometTimer > 0) {
+                accel = 0.95;
+                maxSpd = 9.5;
+                spawnParticles(p.x - Math.cos(p.angle) * 16, p.y - Math.sin(p.angle) * 16, '#fb7185', 2, 3);
+            } else if (p.isBoosting) {
+                accel = 0.92;
+                maxSpd = 9.0;
+                p.boost = Math.max(0, p.boost - 36 * dt);
+                sfx.playBoost();
+                const flameColor = p.id === 'p1' ? '#38bdf8' : '#fb923c';
+                spawnParticles(p.x - Math.cos(p.angle) * 18, p.y - Math.sin(p.angle) * 18, flameColor, 2, 3.5);
+            } else {
+                // Passive boost recharge
+                p.boost = Math.min(100, p.boost + 16 * dt);
+            }
+
+            p.vx += ax * accel;
+            p.vy += ay * accel;
+
+            // Friction
+            p.vx *= 0.90;
+            p.vy *= 0.90;
+
+            const currentSpeed = Math.hypot(p.vx, p.vy);
+            if (currentSpeed > maxSpd) {
+                p.vx = (p.vx / currentSpeed) * maxSpd;
+                p.vy = (p.vy / currentSpeed) * maxSpd;
+            }
+
+            p.x += p.vx;
+            p.y += p.vy;
+
+            constrainPlayerToArena(p);
+            checkPlayerPickups(p);
+            checkPlayerBumpers(p);
+        }
+
+        function constrainPlayerToArena(p) {
+            if (p.x - p.radius < MARGIN) {
+                p.x = MARGIN + p.radius;
+                p.vx *= -0.5;
+            }
+            if (p.x + p.radius > W - MARGIN) {
+                p.x = W - MARGIN - p.radius;
+                p.vx *= -0.5;
+            }
+            if (p.y - p.radius < MARGIN) {
+                p.y = MARGIN + p.radius;
+                p.vy *= -0.5;
+            }
+            if (p.y + p.radius > H - MARGIN) {
+                p.y = H - MARGIN - p.radius;
+                p.vy *= -0.5;
+            }
+        }
+
+        function checkPlayerPickups(p) {
+            // Boost Pads
+            boostPads.forEach(pad => {
+                if (!pad.active) return;
+                const d = Math.hypot(p.x - pad.x, p.y - pad.y);
+                if (d < p.radius + (pad.big ? 16 : 11)) {
+                    pad.active = false;
+                    pad.timer = pad.big ? 7 : 4;
+                    p.boost = Math.min(100, p.boost + (pad.big ? 100 : 45));
+                    sfx.playPad();
+                    spawnParticles(pad.x, pad.y, '#facc15', 10, 4);
+                }
+            });
+
+            // Power-up Orbs
+            for (let i = powerupOrbs.length - 1; i >= 0; i--) {
+                const orb = powerupOrbs[i];
+                if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.radius + orb.radius) {
+                    activatePowerup(p, orb);
+                    powerupOrbs.splice(i, 1);
+                }
+            }
+        }
+
+        function checkPlayerBumpers(p) {
+            bumpers.forEach(b => {
+                const dx = p.x - b.x;
+                const dy = p.y - b.y;
+                const dist = Math.hypot(dx, dy);
+                const minDist = p.radius + b.radius;
+                if (dist < minDist && dist > 0) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    p.x = b.x + nx * (minDist + 2);
+                    p.y = b.y + ny * (minDist + 2);
+                    p.vx = nx * 11;
+                    p.vy = ny * 11;
+                    b.pulse = 1;
+                    sfx.playBumper();
+                    addShake(5);
+                    spawnParticles(b.x + nx * b.radius, b.y + ny * b.radius, '#d8b4fe', 14, 6);
+                }
+            });
+        }
+
+        function resolvePlayerCollision(a, b) {
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = a.radius + b.radius;
+
+            if (dist < minDist && dist > 0) {
+                const nx = dx / dist;
+                const ny = dy / dist;
+                const overlap = minDist - dist;
+
+                a.x -= nx * overlap * 0.5;
+                a.y -= ny * overlap * 0.5;
+                b.x += nx * overlap * 0.5;
+                b.y += ny * overlap * 0.5;
+
+                // Calculate ramming power (Flipping or Comet mode blasts opponent away!)
+                const aPower = (a.flipTimer > 0 || a.cometTimer > 0) ? 14 : (a.isBoosting ? 8.5 : 5);
+                const bPower = (b.flipTimer > 0 || b.cometTimer > 0) ? 14 : (b.isBoosting ? 8.5 : 5);
+
+                const relVx = a.vx - b.vx;
+                const relVy = a.vy - b.vy;
+                const impact = Math.hypot(relVx, relVy);
+
+                a.vx = -nx * bPower + a.vx * 0.3;
+                a.vy = -ny * bPower + a.vy * 0.3;
+                b.vx = nx * aPower + b.vx * 0.3;
+                b.vy = ny * aPower + b.vy * 0.3;
+
+                if (impact > 4 || a.flipTimer > 0 || b.flipTimer > 0) {
+                    sfx.playKick(1.4);
+                    addShake(7);
+                    spawnParticles((a.x + b.x) / 2, (a.y + b.y) / 2, '#ffffff', 16, 6);
+                }
+            }
+        }
+
+        function updateBall(b) {
+            // Save trail
+            b.trail.push({ x: b.x, y: b.y });
+            if (b.trail.length > 12) b.trail.shift();
+
+            // Friction & Max Speed
+            b.vx *= 0.988;
+            b.vy *= 0.988;
+
+            const maxBallSpeed = 19;
+            const spd = Math.hypot(b.vx, b.vy);
+            if (spd > maxBallSpeed) {
+                b.vx = (b.vx / spd) * maxBallSpeed;
+                b.vy = (b.vy / spd) * maxBallSpeed;
+            }
+
+            b.x += b.vx;
+            b.y += b.vy;
+
+            // Ball vs Players
+            [p1, p2].forEach(p => {
+                const dx = b.x - p.x;
+                const dy = b.y - p.y;
+                const dist = Math.hypot(dx, dy);
+                const minDist = p.radius + b.radius;
+
+                if (dist < minDist && dist > 0) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const overlap = minDist - dist;
+
+                    b.x += nx * overlap;
+                    b.y += ny * overlap;
+
+                    const isPowerShot = p.flipTimer > 0 || p.cometTimer > 0;
+                    const shotMultiplier = isPowerShot ? 16.5 : (p.isBoosting ? 12.2 : 8.5);
+                    const massFactor = giantBallTimer > 0 ? 0.72 : 1.0;
+
+                    b.vx = nx * shotMultiplier * massFactor + p.vx * 0.45;
+                    b.vy = ny * shotMultiplier * massFactor + p.vy * 0.45;
+                    b.lastTouchedBy = p.id;
+
+                    if (isPowerShot) {
+                        sfx.playKick(1.8);
+                        addShake(11);
+                        hitStopFrames = 3; // Crisp arcade hit-stop!
+                        spawnShockwave(b.x, b.y, '#facc15', 65);
+                        spawnParticles(b.x, b.y, '#facc15', 22, 8);
+                        addFloatingText(b.x, b.y - 20, 'POWER SHOT!', '#facc15');
+                    } else {
+                        sfx.playKick(1.0);
+                        spawnParticles(b.x, b.y, p.color, 8, 4);
+                    }
+                }
+            });
+
+            // Ball vs Pinball Bumpers
+            bumpers.forEach(bmp => {
+                const dx = b.x - bmp.x;
+                const dy = b.y - bmp.y;
+                const dist = Math.hypot(dx, dy);
+                const minDist = b.radius + bmp.radius;
+
+                if (dist < minDist && dist > 0) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    b.x = bmp.x + nx * (minDist + 2);
+                    b.y = bmp.y + ny * (minDist + 2);
+                    const bounceSpd = Math.max(12, Math.hypot(b.vx, b.vy) * 1.25);
+                    b.vx = nx * bounceSpd;
+                    b.vy = ny * bounceSpd;
+                    bmp.pulse = 1;
+                    sfx.playBumper();
+                    addShake(6);
+                    spawnParticles(bmp.x + nx * bmp.radius, bmp.y + ny * bmp.radius, '#e879f9', 16, 7);
+                }
+            });
+
+            // Top & Bottom Wall Bounce
+            if (b.y - b.radius < MARGIN) {
+                b.y = MARGIN + b.radius;
+                b.vy = Math.abs(b.vy) * 0.85;
+                spawnParticles(b.x, MARGIN, '#38bdf8', 5, 3);
+            }
+            if (b.y + b.radius > H - MARGIN) {
+                b.y = H - MARGIN - b.radius;
+                b.vy = -Math.abs(b.vy) * 0.85;
+                spawnParticles(b.x, H - MARGIN, '#38bdf8', 5, 3);
+            }
+
+            // Left Goal Check (Player 2 Scores)
+            const leftGoalTop = (H - goals.leftWidth) / 2;
+            const leftGoalBot = leftGoalTop + goals.leftWidth;
+            if (b.x - b.radius < MARGIN) {
+                if (b.y > leftGoalTop && b.y < leftGoalBot) {
+                    if (b.x < MARGIN - 6) {
+                        handleGoalScored('p2', b);
+                        return true;
+                    }
+                } else {
+                    b.x = MARGIN + b.radius;
+                    b.vx = Math.abs(b.vx) * 0.85;
+                }
+            }
+
+            // Right Goal Check (Player 1 Scores)
+            const rightGoalTop = (H - goals.rightWidth) / 2;
+            const rightGoalBot = rightGoalTop + goals.rightWidth;
+            if (b.x + b.radius > W - MARGIN) {
+                if (b.y > rightGoalTop && b.y < rightGoalBot) {
+                    if (b.x > W - MARGIN + 6) {
+                        handleGoalScored('p1', b);
+                        return true;
+                    }
+                } else {
+                    b.x = W - MARGIN - b.radius;
+                    b.vx = -Math.abs(b.vx) * 0.85;
+                }
+            }
+
+            return false;
+        }
+
+        function handleGoalScored(scorerId, ball) {
+            isGoalPause = true;
+            sfx.playGoal();
+            addShake(22);
+
+            const goalX = scorerId === 'p1' ? W - MARGIN : MARGIN;
+            const goalY = ball.y;
+            const color = scorerId === 'p1' ? '#22d3ee' : '#f43f5e';
+
+            // Massive Goal Explosion Shockwave & Particles
+            spawnShockwave(goalX, goalY, color, 260);
+            spawnShockwave(goalX, goalY, '#facc15', 180);
+            spawnParticles(goalX, goalY, color, 55, 13);
+            spawnParticles(goalX, goalY, '#facc15', 35, 11);
+
+            // Blast both players across the arena from the goal explosion!
+            [p1, p2].forEach(p => {
+                const dx = p.x - goalX;
+                const dy = p.y - goalY;
+                const d = Math.max(40, Math.hypot(dx, dy));
+                p.vx = (dx / d) * 18;
+                p.vy = (dy / d) * 18;
+                p.frozenTimer = 0;
+            });
+
+            // Update Score
+            if (scorerId === 'p1') {
+                scores.p1++;
+                p1ScoreEl.textContent = scores.p1;
+                goalText.textContent = 'CYAN SCORES!';
+                goalText.className = 'arcade-font text-3xl md:text-5xl text-cyan-300 drop-shadow-[0_0_25px_rgba(34,211,238,0.9)] bg-slate-950/85 px-8 py-4 rounded-2xl border-4 border-cyan-400';
+            } else {
+                scores.p2++;
+                p2ScoreEl.textContent = scores.p2;
+                goalText.textContent = 'MAGENTA SCORES!';
+                goalText.className = 'arcade-font text-3xl md:text-5xl text-rose-300 drop-shadow-[0_0_25px_rgba(244,63,94,0.9)] bg-slate-950/85 px-8 py-4 rounded-2xl border-4 border-rose-500';
+            }
+
+            const speedKmh = Math.round(Math.hypot(ball.vx, ball.vy) * 11);
+            goalSubtext.textContent = ball.isBonus ? `GOLDEN BONUS BALL • ${speedKmh} KM/H` : `SHOT SPEED: ${speedKmh} KM/H`;
+
+            goalBanner.classList.remove('opacity-0', 'scale-75');
+            goalBanner.classList.add('opacity-100', 'scale-100');
+
+            setTimeout(() => {
+                goalBanner.classList.remove('opacity-100', 'scale-100');
+                goalBanner.classList.add('opacity-0', 'scale-75');
+
+                if (scores.p1 >= targetGoals || scores.p2 >= targetGoals) {
+                    endMatch();
+                } else {
+                    resetPositions();
+                    isGoalPause = false;
+                }
+            }, 1700);
+        }
+
+        function endMatch() {
+            gameRunning = false;
+            isGoalPause = false;
+
+            if (scores.p1 > scores.p2) {
+                winnerText.textContent = 'PLAYER 1 (CYAN) WINS!';
+                winnerText.className = 'arcade-font text-xl md:text-4xl text-cyan-400 neon-cyan mb-3 text-center leading-relaxed';
+            } else if (scores.p2 > scores.p1) {
+                winnerText.textContent = 'PLAYER 2 (MAGENTA) WINS!';
+                winnerText.className = 'arcade-font text-xl md:text-4xl text-rose-400 neon-pink mb-3 text-center leading-relaxed';
+            } else {
+                winnerText.textContent = 'OVERTIME DRAW!';
+                winnerText.className = 'arcade-font text-xl md:text-4xl text-yellow-400 neon-gold mb-3 text-center leading-relaxed';
+            }
+
+            finalScoreText.textContent = `${scores.p1}  -  ${scores.p2}`;
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function updateFX(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx;
+                pt.y += pt.vy;
+                pt.vx *= 0.94;
+                pt.vy *= 0.94;
+                pt.life -= pt.decay;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = shockwaves.length - 1; i >= 0; i--) {
+                const sw = shockwaves[i];
+                sw.radius += (sw.maxRadius - sw.radius) * 0.16;
+                sw.alpha -= 0.045;
+                if (sw.alpha <= 0) shockwaves.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y += ft.vy;
+                ft.life -= dt;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+        }
+
+        function updateTimerUI() {
+            const total = Math.ceil(matchSeconds);
+            const mins = Math.floor(total / 60).toString().padStart(2, '0');
+            const secs = (total % 60).toString().padStart(2, '0');
+            matchTimerEl.textContent = `${mins}:${secs}`;
+        }
+
+        function updateBadgesUI() {
+            p1BoostBar.style.width = `${Math.round(p1.boost)}%`;
+            p2BoostBar.style.width = `${Math.round(p2.boost)}%`;
+
+            if (p1.frozenTimer > 0) {
+                p1Badge.textContent = '❄️ FROZEN';
+                p1Badge.classList.remove('hidden');
+            } else if (p1.cometTimer > 0) {
+                p1Badge.textContent = '🔥 COMET';
+                p1Badge.classList.remove('hidden');
+            } else {
+                p1Badge.classList.add('hidden');
+            }
+
+            if (p2.frozenTimer > 0) {
+                p2Badge.textContent = '❄️ FROZEN';
+                p2Badge.classList.remove('hidden');
+            } else if (p2.cometTimer > 0) {
+                p2Badge.textContent = '🔥 COMET';
+                p2Badge.classList.remove('hidden');
+            } else {
+                p2Badge.classList.add('hidden');
+            }
+
+            if (giantBallTimer > 0) {
+                activeGlobalEventEl.textContent = `🌕 GIANT BALL (${giantBallTimer.toFixed(1)}S)`;
+            } else if (balls.length > 1) {
+                activeGlobalEventEl.textContent = '✨ MULTIBALL MADNESS!';
+            } else if (goals.leftBigTimer > 0 || goals.rightBigTimer > 0) {
+                activeGlobalEventEl.textContent = '🥅 ENLARGED GOAL!';
+            } else {
+                activeGlobalEventEl.textContent = '';
+            }
+        }
+
+        // ==========================================
+        // 8. RENDER PIPELINE (CYBERPUNK ARENA)
+        // ==========================================
+        function draw() {
+            ctx.save();
+            ctx.translate(camera.x, camera.y);
+
+            // Deep Cyber Stadium Floor
+            ctx.fillStyle = '#070d19';
+            ctx.fillRect(-30, -30, W + 60, H + 60);
+
+            // Subtle Hex/Grid Turf Tiles
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.55)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let gx = MARGIN; gx <= W - MARGIN; gx += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(gx, MARGIN);
+                ctx.lineTo(gx, H - MARGIN);
+                ctx.stroke();
+            }
+            for (let gy = MARGIN; gy <= H - MARGIN; gy += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(MARGIN, gy);
+                ctx.lineTo(W - MARGIN, gy);
+                ctx.stroke();
+            }
+
+            // Half-pitch Team Tint Glows
+            const leftGrad = ctx.createLinearGradient(MARGIN, 0, W / 2, 0);
+            leftGrad.addColorStop(0, 'rgba(34, 211, 238, 0.08)');
+            leftGrad.addColorStop(1, 'rgba(34, 211, 238, 0)');
+            ctx.fillStyle = leftGrad;
+            ctx.fillRect(MARGIN, MARGIN, W / 2 - MARGIN, H - MARGIN * 2);
+
+            const rightGrad = ctx.createLinearGradient(W / 2, 0, W - MARGIN, 0);
+            rightGrad.addColorStop(0, 'rgba(244, 63, 94, 0)');
+            rightGrad.addColorStop(1, 'rgba(244, 63, 94, 0.08)');
+            ctx.fillStyle = rightGrad;
+            ctx.fillRect(W / 2, MARGIN, W / 2 - MARGIN, H - MARGIN * 2);
+
+            // Glowing Arena Outer Walls
+            ctx.strokeStyle = '#38bdf8';
+            ctx.shadowColor = '#0284c7';
+            ctx.shadowBlur = 12;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(MARGIN, MARGIN, W - MARGIN * 2, H - MARGIN * 2);
+            ctx.shadowBlur = 0;
+
+            // Center Line & Circle
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(W / 2, MARGIN);
+            ctx.lineTo(W / 2, H - MARGIN);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(W / 2, H / 2, 75, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Penalty Boxes
+            ctx.strokeRect(MARGIN, (H - 250) / 2, 125, 250);
+            ctx.strokeRect(W - MARGIN - 125, (H - 250) / 2, 125, 250);
+
+            // Draw Goals
+            drawGoal(MARGIN - goals.depth, (H - goals.leftWidth) / 2, goals.depth, goals.leftWidth, '#22d3ee');
+            drawGoal(W - MARGIN, (H - goals.rightWidth) / 2, goals.depth, goals.rightWidth, '#f43f5e');
+
+            // Draw Boost Pads
+            boostPads.forEach(pad => {
+                const r = pad.big ? 13 : 8;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(pad.x, pad.y, r, 0, Math.PI * 2);
+                if (pad.active) {
+                    ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+                    ctx.fill();
+                    ctx.strokeStyle = '#facc15';
+                    ctx.shadowColor = '#facc15';
+                    ctx.shadowBlur = 12;
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+                } else {
+                    ctx.strokeStyle = 'rgba(100, 116, 139, 0.4)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            });
+
+            // Draw Pinball Bumpers
+            bumpers.forEach(b => {
+                ctx.save();
+                const scale = 1 + b.pulse * 0.28;
+                ctx.translate(b.x, b.y);
+                ctx.scale(scale, scale);
+
+                ctx.shadowColor = b.glow;
+                ctx.shadowBlur = 18 + b.pulse * 15;
+
+                ctx.fillStyle = '#3b0764';
+                ctx.beginPath();
+                ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = b.glow;
+                ctx.lineWidth = 4;
+                ctx.stroke();
+
+                // Inner Neon Ring
+                ctx.strokeStyle = '#facc15';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, b.radius * 0.55, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // Draw Power-Up Orbs
+            powerupOrbs.forEach(orb => {
+                const bobY = Math.sin(orb.bobPhase) * 4;
+                ctx.save();
+                ctx.translate(orb.x, orb.y + bobY);
+
+                ctx.shadowColor = orb.type.color;
+                ctx.shadowBlur = 18;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+                ctx.beginPath();
+                ctx.arc(0, 0, orb.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = orb.type.color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.font = '18px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(orb.type.icon, 0, 1);
+                ctx.restore();
+            });
+
+            // Draw Shockwaves
+            shockwaves.forEach(sw => {
+                ctx.save();
+                ctx.strokeStyle = sw.color;
+                ctx.globalAlpha = Math.max(0, sw.alpha);
+                ctx.lineWidth = 3.5;
+                ctx.beginPath();
+                ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // Draw Particles
+            particles.forEach(pt => {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, pt.life);
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Draw Players
+            drawPlayer(p1);
+            drawPlayer(p2);
+
+            // Draw Balls
+            balls.forEach(drawBall);
+
+            // Draw Floating Texts
+            floatingTexts.forEach(ft => {
+                ctx.save();
+                ctx.globalAlpha = Math.min(1, ft.life);
+                ctx.font = '900 13px "Orbitron", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = ft.color;
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 6;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        function drawGoal(x, y, w, h, color) {
+            ctx.save();
+            ctx.fillStyle = color === '#22d3ee' ? 'rgba(34, 211, 238, 0.16)' : 'rgba(244, 63, 94, 0.16)';
+            ctx.fillRect(x, y, w, h);
+
+            ctx.strokeStyle = color;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 15;
+            ctx.lineWidth = 4;
+            ctx.strokeRect(x, y, w, h);
+            ctx.restore();
+        }
+
+        function drawPlayer(p) {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+
+            // Flip Cooldown Indicator Ring
+            if (p.flipCooldown <= 0 && p.frozenTimer <= 0) {
+                ctx.strokeStyle = 'rgba(250, 204, 21, 0.45)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, p.radius + 6, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // Rotate body (includes spin during flip-dash!)
+            ctx.rotate(p.angle + (p.flipTimer > 0 ? p.spinAngle : 0));
+
+            // Comet / Flip Aura
+            if (p.cometTimer > 0 || p.flipTimer > 0) {
+                ctx.shadowColor = '#facc15';
+                ctx.shadowBlur = 24;
+            } else {
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 14;
+            }
+
+            // Arcade Striker Chassis
+            ctx.fillStyle = p.cometTimer > 0 ? '#facc15' : p.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            // Forward Visor / Bumper Nose (shows facing direction clearly)
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(6, 0, p.radius * 0.55, -0.85, 0.85);
+            ctx.lineTo(4, 0);
+            ctx.closePath();
+            ctx.fill();
+
+            // Front Power-Kick Bumper Bar
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, 0, p.radius + 1, -0.55, 0.55);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Frozen Ice Cube Overlay
+            if (p.frozenTimer > 0) {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.55)';
+                ctx.strokeStyle = '#bae6fd';
+                ctx.lineWidth = 3;
+                const s = p.radius * 2.2;
+                ctx.fillRect(-s / 2, -s / 2, s, s);
+                ctx.strokeRect(-s / 2, -s / 2, s, s);
+                ctx.restore();
+            }
+        }
+
+        function drawBall(b) {
+            // Motion Trail
+            for (let i = 0; i < b.trail.length; i++) {
+                const t = b.trail[i];
+                const ratio = (i + 1) / b.trail.length;
+                ctx.save();
+                ctx.globalAlpha = ratio * 0.35;
+                ctx.fillStyle = b.isBonus ? '#facc15' : (giantBallTimer > 0 ? '#fb923c' : '#38bdf8');
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, b.radius * ratio * 0.85, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            ctx.save();
+            ctx.translate(b.x, b.y);
+
+            const ballColor = b.isBonus ? '#facc15' : (giantBallTimer > 0 ? '#fde047' : '#ffffff');
+            ctx.shadowColor = b.isBonus ? '#facc15' : '#38bdf8';
+            ctx.shadowBlur = 16;
+
+            ctx.fillStyle = ballColor;
+            ctx.beginPath();
+            ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Cyber Core Ring on Ball
+            ctx.strokeStyle = b.isBonus ? '#b45309' : '#0f172a';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(0, 0, b.radius * 0.55, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // ==========================================
+        // 9. MAIN ANIMATION LOOP
+        // ==========================================
+        function gameLoop(timestamp) {
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000 || 0.016);
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initial Preview Frame
+        resetPositions();
+        draw();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>

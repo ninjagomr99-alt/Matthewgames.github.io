@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sunlit Tag Arena - 2 Player Local Tag</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #e0f2fe;
+            color: #1e293b;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+        }
+        .font-arcade {
+            font-family: 'Fredoka', sans-serif;
+            letter-spacing: 0.02em;
+        }
+        /* Clean Crisp Daylight Highlights */
+        .ring-it {
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35), 0 0 0 3px #f59e0b;
+            border-color: #f59e0b !important;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        @keyframes pulse-border {
+            0%, 100% { border-color: #f59e0b; }
+            50% { border-color: #ef4444; }
+        }
+        .it-badge-anim {
+            animation: pulse-border 0.85s infinite;
+        }
+    </style>
+</head>
+<body class="bg-sky-100 text-slate-800 flex flex-col h-screen w-screen overflow-hidden">
+
+    <!-- TOP HUD BAR -->
+    <header class="w-full bg-white/95 border-b-2 border-slate-200 px-3 py-2 sm:px-6 sm:py-2.5 flex items-center justify-between z-20 shrink-0 shadow-sm">
+        
+        <!-- PLAYER 1 HUD (COBALT BLUE) -->
+        <div id="p1-hud" class="flex items-center gap-2 sm:gap-3.5 bg-slate-50 border-2 border-blue-200 rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 transition-all duration-200 w-1/3 max-w-xs shadow-sm">
+            <div class="relative flex-shrink-0">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center font-arcade font-bold text-white text-sm sm:text-lg shadow-sm">
+                    P1
+                </div>
+                <span id="p1-it-crown" class="hidden absolute -top-3.5 -right-2 text-base sm:text-xl drop-shadow-sm">👑</span>
+            </div>
+            <div class="flex flex-col w-full min-w-0">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="font-arcade font-bold text-xs sm:text-sm text-blue-700 truncate">COBALT</span>
+                    <span id="p1-status-badge" class="text-[10px] sm:text-xs font-arcade font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">SAFE</span>
+                </div>
+                <!-- Dash Cooldown Meter -->
+                <div class="w-full bg-slate-200 h-2 sm:h-2.5 rounded-full mt-1.5 overflow-hidden border border-slate-300">
+                    <div id="p1-dash-bar" class="bg-blue-600 h-full w-full transition-all duration-75"></div>
+                </div>
+                <div class="flex justify-between text-[9px] sm:text-[10px] text-slate-500 mt-0.5 font-semibold">
+                    <span>DASH</span>
+                    <span id="p1-effect-label" class="text-amber-600 font-bold"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER TIMER & SOUND TOGGLE -->
+        <div class="flex flex-col items-center justify-center px-2">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div id="timer-box" class="bg-slate-50 border-2 border-slate-300 rounded-2xl px-4 py-1 sm:px-6 sm:py-1.5 flex flex-col items-center shadow-sm">
+                    <span class="text-[9px] sm:text-[10px] font-arcade font-bold tracking-wider text-slate-500 uppercase">TIME LEFT</span>
+                    <span id="timer-display" class="font-arcade font-bold text-2xl sm:text-4xl text-slate-800 tracking-wide">60.0</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mt-1">
+                <span id="map-name-badge" class="text-[10px] sm:text-xs text-slate-600 font-arcade font-bold tracking-wide uppercase">CLASSIC COURTYARD</span>
+                <button id="mute-btn" title="Toggle Sound" class="p-1 px-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition border border-slate-300 text-xs flex items-center gap-1 cursor-pointer shadow-xs">
+                    <span id="mute-icon">🔊</span>
+                </button>
+                <button id="pause-menu-btn" title="Return to Menu" class="p-1 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition border border-slate-300 text-[10px] font-arcade font-bold cursor-pointer shadow-xs">
+                    MENU
+                </button>
+            </div>
+        </div>
+
+        <!-- PLAYER 2 HUD (CORAL RED) -->
+        <div id="p2-hud" class="flex items-center justify-end gap-2 sm:gap-3.5 bg-slate-50 border-2 border-rose-200 rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 transition-all duration-200 w-1/3 max-w-xs shadow-sm">
+            <div class="flex flex-col w-full min-w-0 text-right">
+                <div class="flex items-center justify-between gap-1">
+                    <span id="p2-status-badge" class="text-[10px] sm:text-xs font-arcade font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-400">IT!</span>
+                    <span class="font-arcade font-bold text-xs sm:text-sm text-rose-600 truncate">CORAL</span>
+                </div>
+                <!-- Dash Cooldown Meter -->
+                <div class="w-full bg-slate-200 h-2 sm:h-2.5 rounded-full mt-1.5 overflow-hidden border border-slate-300">
+                    <div id="p2-dash-bar" class="bg-rose-500 h-full w-full transition-all duration-75 ml-auto"></div>
+                </div>
+                <div class="flex justify-between text-[9px] sm:text-[10px] text-slate-500 mt-0.5 font-semibold">
+                    <span id="p2-effect-label" class="text-sky-600 font-bold"></span>
+                    <span>DASH</span>
+                </div>
+            </div>
+            <div class="relative flex-shrink-0">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-rose-500 flex items-center justify-center font-arcade font-bold text-white text-sm sm:text-lg shadow-sm">
+                    P2
+                </div>
+                <span id="p2-it-crown" class="absolute -top-3.5 -left-2 text-base sm:text-xl drop-shadow-sm">👑</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN GAME CANVAS CONTAINER -->
+    <main class="relative flex-1 w-full h-full overflow-hidden bg-sky-200 flex items-center justify-center">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- ON-SCREEN TOUCH CONTROLS -->
+        <div id="touch-controls" class="md:hidden absolute bottom-2 left-2 right-2 flex justify-between pointer-events-none z-10 opacity-85">
+            <!-- P1 Touch -->
+            <div class="flex gap-1.5 pointer-events-auto">
+                <button data-key="KeyA" class="touch-btn w-11 h-11 rounded-xl bg-blue-600/85 border-2 border-white text-white font-bold shadow active:bg-blue-700">◀</button>
+                <button data-key="KeyD" class="touch-btn w-11 h-11 rounded-xl bg-blue-600/85 border-2 border-white text-white font-bold shadow active:bg-blue-700">▶</button>
+                <button data-key="KeyW" class="touch-btn w-11 h-11 rounded-xl bg-blue-600/85 border-2 border-white text-white font-bold shadow active:bg-blue-700">▲</button>
+                <button data-key="Space" class="touch-btn px-2.5 h-11 rounded-xl bg-blue-800/90 border-2 border-white text-white font-arcade text-xs font-bold shadow active:bg-blue-900">DASH</button>
+            </div>
+            <!-- P2 Touch -->
+            <div class="flex gap-1.5 pointer-events-auto">
+                <button data-key="Enter" class="touch-btn px-2.5 h-11 rounded-xl bg-rose-700/90 border-2 border-white text-white font-arcade text-xs font-bold shadow active:bg-rose-800">DASH</button>
+                <button data-key="ArrowUp" class="touch-btn w-11 h-11 rounded-xl bg-rose-500/85 border-2 border-white text-white font-bold shadow active:bg-rose-600">▲</button>
+                <button data-key="ArrowLeft" class="touch-btn w-11 h-11 rounded-xl bg-rose-500/85 border-2 border-white text-white font-bold shadow active:bg-rose-600">◀</button>
+                <button data-key="ArrowRight" class="touch-btn w-11 h-11 rounded-xl bg-rose-500/85 border-2 border-white text-white font-bold shadow active:bg-rose-600">▶</button>
+            </div>
+        </div>
+
+        <!-- START SCREEN OVERLAY -->
+        <div id="start-screen" class="absolute inset-0 bg-sky-900/35 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-30 overflow-y-auto">
+            <div class="max-w-3xl w-full bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center text-center">
+                
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-800 font-arcade font-bold text-xs tracking-wider mb-3">
+                    <span>☀️ 2-PLAYER LOCAL TAG ARCADE ☀️</span>
+                </div>
+                
+                <h1 class="font-arcade font-bold text-4xl sm:text-6xl tracking-tight text-slate-800 mb-2">
+                    SUNLIT <span class="text-blue-600">TAG</span> <span class="text-rose-500">ARENA</span>
+                </h1>
+                <p class="text-slate-600 text-sm sm:text-base max-w-lg mb-6 font-medium">
+                    Sprint, leap, and dash across expansive arenas! Whoever is <span class="text-emerald-600 font-bold">SAFE (not "IT")</span> when the 60-second timer runs out wins!
+                </p>
+
+                <!-- MAP SELECTOR -->
+                <div class="w-full mb-6">
+                    <label class="block font-arcade font-bold text-xs text-slate-500 uppercase tracking-wider mb-3">Choose Your Arena</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="map-selector">
+                        <button type="button" data-map="classic" class="map-card active-map cursor-pointer p-3.5 rounded-2xl bg-blue-50 border-2 border-blue-500 text-left transition hover:bg-blue-50/80 flex flex-col justify-between shadow-xs">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-arcade font-bold text-sm text-slate-800">🌳 Classic Courtyard</span>
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">XL</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Expansive sunlit park grounds with multi-tiered stone bridges, watchtowers & spring pads.</p>
+                        </button>
+
+                        <button type="button" data-map="jumppads" class="map-card cursor-pointer p-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 text-left transition hover:bg-slate-100 flex flex-col justify-between shadow-xs">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-arcade font-bold text-sm text-slate-800">🏰 Sky Springs</span>
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-100 text-sky-700">XL</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Soaring highland cloud islands & tall stone towers linked by super-bouncy jump pads.</p>
+                        </button>
+
+                        <button type="button" data-map="maze" class="map-card cursor-pointer p-3.5 rounded-2xl bg-slate-50 border-2 border-slate-200 text-left transition hover:bg-slate-100 flex flex-col justify-between shadow-xs">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="font-arcade font-bold text-sm text-slate-800">🧱 Garden Maze</span>
+                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">TACTICAL</span>
+                            </div>
+                            <p class="text-xs text-slate-600">Crisp sandstone corridors, vertical chutes & clever corner juke spots.</p>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTROLS & POWERUPS LEGEND -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full mb-6 text-left">
+                    <!-- P1 Controls -->
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-3.5 flex items-center justify-between">
+                        <div>
+                            <div class="font-arcade font-bold text-blue-700 text-sm mb-1">PLAYER 1 (COBALT)</div>
+                            <div class="text-xs text-slate-700 space-y-1 font-medium">
+                                <div>Move / Jump: <kbd class="px-1.5 py-0.5 bg-white rounded border border-blue-300 font-mono text-blue-700 font-bold shadow-2xs">W A S D</kbd></div>
+                                <div>Dash Boost: <kbd class="px-1.5 py-0.5 bg-white rounded border border-blue-300 font-mono text-blue-700 font-bold shadow-2xs">SPACE</kbd> or <kbd class="px-1.5 py-0.5 bg-white rounded border border-blue-300 font-mono text-blue-700 font-bold shadow-2xs">L-SHIFT</kbd></div>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 shadow-sm flex items-center justify-center font-arcade font-bold text-white">P1</div>
+                    </div>
+
+                    <!-- P2 Controls -->
+                    <div class="bg-rose-50 border-2 border-rose-200 rounded-2xl p-3.5 flex items-center justify-between">
+                        <div>
+                            <div class="font-arcade font-bold text-rose-600 text-sm mb-1">PLAYER 2 (CORAL)</div>
+                            <div class="text-xs text-slate-700 space-y-1 font-medium">
+                                <div>Move / Jump: <kbd class="px-1.5 py-0.5 bg-white rounded border border-rose-300 font-mono text-rose-600 font-bold shadow-2xs">ARROWS</kbd></div>
+                                <div>Dash Boost: <kbd class="px-1.5 py-0.5 bg-white rounded border border-rose-300 font-mono text-rose-600 font-bold shadow-2xs">ENTER</kbd> or <kbd class="px-1.5 py-0.5 bg-white rounded border border-rose-300 font-mono text-rose-600 font-bold shadow-2xs">R-SHIFT</kbd></div>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-rose-500 shadow-sm flex items-center justify-center font-arcade font-bold text-white">P2</div>
+                    </div>
+                </div>
+
+                <!-- Powerups quick bar -->
+                <div class="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-700 mb-6 bg-slate-100 px-4 py-2.5 rounded-xl border border-slate-200 font-medium">
+                    <span class="flex items-center gap-1.5"><span class="text-base">⚡</span> <strong>Speed Surge:</strong> +45% Speed</span>
+                    <span class="flex items-center gap-1.5"><span class="text-base">❄️</span> <strong>Frost Pulse:</strong> Slows Rival</span>
+                    <span class="flex items-center gap-1.5"><span class="text-base">🛡️</span> <strong>Dash Reset:</strong> Instant Cooldown</span>
+                </div>
+
+                <button id="start-btn" class="cursor-pointer w-full sm:w-auto px-10 py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-arcade font-bold text-lg sm:text-xl tracking-wide shadow-lg shadow-emerald-500/25 transition transform border-b-4 border-emerald-700">
+                    START MATCH ▶
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME OVER OVERLAY -->
+        <div id="gameover-screen" class="hidden absolute inset-0 bg-sky-900/35 backdrop-blur-sm flex flex-col items-center justify-center p-4 z-30">
+            <div class="max-w-md w-full bg-white border-2 border-slate-200 rounded-3xl p-8 shadow-2xl text-center flex flex-col items-center">
+                <div class="text-5xl mb-3">🏆</div>
+                <div class="font-arcade font-bold text-xs tracking-widest text-slate-400 uppercase mb-1">TIME'S UP!</div>
+                <h2 id="winner-title" class="font-arcade font-bold text-3xl sm:text-4xl text-blue-600 mb-2">
+                    PLAYER 1 WINS!
+                </h2>
+                <p id="winner-subtitle" class="text-slate-600 text-sm mb-6 font-medium">
+                    Escaped the tag when the clock hit zero!
+                </p>
+
+                <!-- Match Stats -->
+                <div class="w-full bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-6 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <div class="text-[10px] font-arcade font-bold text-slate-500">TOTAL TAGS</div>
+                        <div id="stat-tags" class="font-arcade font-bold text-xl text-amber-500">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-arcade font-bold text-blue-600">P1 SAFE TIME</div>
+                        <div id="stat-p1-safe" class="font-arcade font-bold text-xl text-slate-800">0s</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-arcade font-bold text-rose-500">P2 SAFE TIME</div>
+                        <div id="stat-p2-safe" class="font-arcade font-bold text-xl text-slate-800">0s</div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 w-full">
+                    <button id="play-again-btn" class="cursor-pointer flex-1 py-3.5 px-6 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-arcade font-bold text-base tracking-wide transition shadow-md border-b-4 border-emerald-700">
+                        PLAY AGAIN ↻
+                    </button>
+                    <button id="change-map-btn" class="cursor-pointer py-3.5 px-5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-arcade font-bold text-sm border border-slate-300 transition">
+                        ARENAS
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER CONTROLS LEGEND (Desktop) -->
+    <footer class="hidden sm:flex w-full bg-white/95 border-t border-slate-200 px-6 py-1.5 justify-between items-center text-xs text-slate-600 shrink-0 font-medium">
+        <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
+            <span><strong class="text-blue-700">P1:</strong> WASD to Move/Jump • Space / L-Shift to Dash</span>
+        </div>
+        <div class="font-arcade text-[11px] text-slate-400 font-bold">
+            TAG IMMUNITY: 1.5s • DOUBLE JUMP • DYNAMIC CAMERA
+        </div>
+        <div class="flex items-center gap-2">
+            <span><strong class="text-rose-600">P2:</strong> Arrows to Move/Jump • Enter / R-Shift to Dash</span>
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * SUNLIT TAG ARENA - 2-Player Local Arcade Game
+         * Complete self-contained engine with Web Audio synthesizer, smooth dynamic
+         * zoom/pan camera for expanded arenas, custom physics, and daylight visuals.
+         */
+
+        // ==========================================
+        // 1. WEB AUDIO SYNTHESIZER
+        // ==========================================
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playJump(pitchOffset = 0) {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(240 + pitchOffset, now);
+                osc.frequency.exponentialRampToValueAtTime(520 + pitchOffset, now + 0.14);
+
+                gain.gain.setValueAtTime(0.14, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            }
+
+            playDash() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(580, now);
+                osc.frequency.exponentialRampToValueAtTime(140, now + 0.18);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.19);
+            }
+
+            playBounce() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(190, now);
+                osc.frequency.exponentialRampToValueAtTime(820, now + 0.25);
+
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.26);
+            }
+
+            playTag() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [150, 320].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = idx === 0 ? 'square' : 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now);
+                    osc.frequency.exponentialRampToValueAtTime(freq * 1.8, now + 0.1);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.32);
+
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.33);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.33);
+                });
+            }
+
+            playPowerup() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.05);
+                    gain.gain.setValueAtTime(0.14, now + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.05);
+                    osc.stop(now + i * 0.05 + 0.15);
+                });
+            }
+
+            playCountdownTick(final = false) {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(final ? 880 : 520, now);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + (final ? 0.4 : 0.12));
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + (final ? 0.4 : 0.12));
+            }
+        }
+
+        const sfx = new SoundFX();
+
+        // ==========================================
+        // 2. EXPANDED ARENA DEFINITIONS & DAYLIGHT PALETTES
+        // ==========================================
+        const MAPS = {
+            // ARENA 1: Significantly larger Classic Courtyard / Park Grounds (1920 x 1080)
+            classic: {
+                name: 'Classic Courtyard',
+                worldW: 1920,
+                worldH: 1080,
+                theme: {
+                    skyTop: '#60a5fa',
+                    skyBottom: '#e0f2fe',
+                    sunColor: 'rgba(254, 240, 138, 0.85)',
+                    hillFar: '#93c5fd',
+                    hillNear: '#86efac',
+                    groundBody: '#78716c',
+                    groundTop: '#22c55e',
+                    platBody: '#d6d3d1',
+                    platTop: '#16a34a',
+                    platBorder: '#57534e'
+                },
+                platforms: [
+                    // Outer Boundaries (Floor, Ceiling, Walls)
+                    { x: 0, y: 1030, w: 1920, h: 50, style: 'ground' },
+                    { x: 0, y: 0, w: 1920, h: 24, style: 'wall' },
+                    { x: 0, y: 0, w: 28, h: 1080, style: 'wall' },
+                    { x: 1892, y: 0, w: 28, h: 1080, style: 'wall' },
+
+                    // Tier 1: Lower Courtyard Terraces & Central Stone Pavilion
+                    { x: 120, y: 880, w: 340, h: 26, style: 'grass' },
+                    { x: 1460, y: 880, w: 340, h: 26, style: 'grass' },
+                    { x: 820, y: 890, w: 280, h: 140, style: 'stone' }, // Central courtyard monument block
+                    { x: 560, y: 830, w: 180, h: 24, style: 'wood' },
+                    { x: 1180, y: 830, w: 180, h: 24, style: 'wood' },
+
+                    // Tier 2: Mid-Level Bridges & Side Watchtowers
+                    { x: 28, y: 700, w: 240, h: 26, style: 'stone' },
+                    { x: 1652, y: 700, w: 240, h: 26, style: 'stone' },
+                    { x: 430, y: 690, w: 340, h: 24, style: 'wood' },
+                    { x: 1150, y: 690, w: 340, h: 24, style: 'wood' },
+                    { x: 840, y: 640, w: 240, h: 24, style: 'grass' },
+
+                    // Tier 3: Upper Park Walkways & Overlooks
+                    { x: 180, y: 520, w: 310, h: 24, style: 'grass' },
+                    { x: 1430, y: 520, w: 310, h: 24, style: 'grass' },
+                    { x: 650, y: 490, w: 620, h: 26, style: 'wood' }, // Grand upper bridge
+
+                    // Tier 4: High Canopy Perches
+                    { x: 360, y: 340, w: 260, h: 22, style: 'grass' },
+                    { x: 1300, y: 340, w: 260, h: 22, style: 'grass' },
+                    { x: 830, y: 270, w: 260, h: 22, style: 'stone' },
+                    { x: 110, y: 230, w: 160, h: 20, style: 'wood' },
+                    { x: 1650, y: 230, w: 160, h: 20, style: 'wood' }
+                ],
+                jumpPads: [
+                    { x: 480, y: 1012, w: 72, h: 18, forceY: -1080 },
+                    { x: 1368, y: 1012, w: 72, h: 18, forceY: -1080 },
+                    { x: 924, y: 872, w: 72, h: 18, forceY: -1020 },
+                    { x: 100, y: 682, w: 66, h: 18, forceY: -980 },
+                    { x: 1754, y: 682, w: 66, h: 18, forceY: -980 }
+                ],
+                spawns: [
+                    { x: 240, y: 810 },
+                    { x: 1640, y: 810 }
+                ],
+                powerupSpawns: [
+                    { x: 960, y: 590 },
+                    { x: 960, y: 440 },
+                    { x: 320, y: 470 },
+                    { x: 1600, y: 470 },
+                    { x: 960, y: 220 },
+                    { x: 640, y: 780 },
+                    { x: 1280, y: 780 }
+                ]
+            },
+
+            // ARENA 2: Significantly larger Sky Springs / Highland Towers (2040 x 1220)
+            jumppads: {
+                name: 'Sky Springs',
+                worldW: 2040,
+                worldH: 1220,
+                theme: {
+                    skyTop: '#38bdf8',
+                    skyBottom: '#f0f9ff',
+                    sunColor: 'rgba(253, 224, 71, 0.9)',
+                    hillFar: '#bae6fd',
+                    hillNear: '#a7f3d0',
+                    groundBody: '#64748b',
+                    groundTop: '#34d399',
+                    platBody: '#f8fafc',
+                    platTop: '#0ea5e9',
+                    platBorder: '#94a3b8'
+                },
+                platforms: [
+                    // Outer Boundaries
+                    { x: 0, y: 1170, w: 2040, h: 50, style: 'ground' },
+                    { x: 0, y: 0, w: 2040, h: 24, style: 'wall' },
+                    { x: 0, y: 0, w: 28, h: 1220, style: 'wall' },
+                    { x: 2012, y: 0, w: 28, h: 1220, style: 'wall' },
+
+                    // Lower Valley Islands
+                    { x: 140, y: 1000, w: 300, h: 26, style: 'grass' },
+                    { x: 1600, y: 1000, w: 300, h: 26, style: 'grass' },
+                    { x: 840, y: 980, w: 360, h: 26, style: 'stone' },
+
+                    // Twin Highland Towers (Left & Right)
+                    { x: 480, y: 780, w: 36, h: 230, style: 'stone' },
+                    { x: 1524, y: 780, w: 36, h: 230, style: 'stone' },
+                    { x: 340, y: 780, w: 300, h: 26, style: 'sky' },
+                    { x: 1400, y: 780, w: 300, h: 26, style: 'sky' },
+
+                    // Central Cloud Plaza
+                    { x: 800, y: 730, w: 440, h: 26, style: 'sky' },
+                    { x: 28, y: 820, w: 190, h: 24, style: 'grass' },
+                    { x: 1822, y: 820, w: 190, h: 24, style: 'grass' },
+
+                    // Upper Sky Archipelago
+                    { x: 220, y: 560, w: 320, h: 24, style: 'sky' },
+                    { x: 1500, y: 560, w: 320, h: 24, style: 'sky' },
+                    { x: 680, y: 520, w: 260, h: 24, style: 'wood' },
+                    { x: 1100, y: 520, w: 260, h: 24, style: 'wood' },
+
+                    // Summit Citadel Platforms
+                    { x: 430, y: 340, w: 290, h: 24, style: 'sky' },
+                    { x: 1320, y: 340, w: 290, h: 24, style: 'sky' },
+                    { x: 860, y: 260, w: 320, h: 24, style: 'stone' },
+                    { x: 80, y: 310, w: 180, h: 22, style: 'sky' },
+                    { x: 1780, y: 310, w: 180, h: 22, style: 'sky' }
+                ],
+                jumpPads: [
+                    // Ground floor mega-springs
+                    { x: 60, y: 1152, w: 80, h: 18, forceY: -1180 },
+                    { x: 580, y: 1152, w: 80, h: 18, forceY: -1120 },
+                    { x: 1380, y: 1152, w: 80, h: 18, forceY: -1120 },
+                    { x: 1900, y: 1152, w: 80, h: 18, forceY: -1180 },
+                    // Mid-tier sky springs
+                    { x: 980, y: 712, w: 80, h: 18, forceY: -1140 },
+                    { x: 250, y: 542, w: 72, h: 18, forceY: -1020 },
+                    { x: 1718, y: 542, w: 72, h: 18, forceY: -1020 }
+                ],
+                spawns: [
+                    { x: 240, y: 920 },
+                    { x: 1740, y: 920 }
+                ],
+                powerupSpawns: [
+                    { x: 1020, y: 210 },
+                    { x: 1020, y: 930 },
+                    { x: 490, y: 730 },
+                    { x: 1550, y: 730 },
+                    { x: 810, y: 470 },
+                    { x: 1230, y: 470 },
+                    { x: 575, y: 290 },
+                    { x: 1465, y: 290 }
+                ]
+            },
+
+            // ARENA 3: Garden Maze (Daylight Sandstone & Hedge Maze, 1360 x 780)
+            maze: {
+                name: 'Garden Maze',
+                worldW: 1360,
+                worldH: 780,
+                theme: {
+                    skyTop: '#7dd3fc',
+                    skyBottom: '#fef3c7',
+                    sunColor: 'rgba(253, 230, 138, 0.85)',
+                    hillFar: '#bae6fd',
+                    hillNear: '#bbf7d0',
+                    groundBody: '#92400e',
+                    groundTop: '#16a34a',
+                    platBody: '#fde68a',
+                    platTop: '#d97706',
+                    platBorder: '#b45309'
+                },
+                platforms: [
+                    // Outer Boundaries
+                    { x: 0, y: 744, w: 1360, h: 36, style: 'ground' },
+                    { x: 0, y: 0, w: 1360, h: 22, style: 'wall' },
+                    { x: 0, y: 0, w: 24, h: 780, style: 'wall' },
+                    { x: 1336, y: 0, w: 24, h: 780, style: 'wall' },
+
+                    // Vertical Maze Dividers
+                    { x: 300, y: 500, w: 26, h: 244, style: 'stone' },
+                    { x: 1034, y: 500, w: 26, h: 244, style: 'stone' },
+
+                    { x: 667, y: 400, w: 26, h: 200, style: 'stone' },
+                    { x: 667, y: 22, w: 26, h: 185, style: 'stone' },
+
+                    // Horizontal Maze Ledges
+                    { x: 24, y: 570, w: 165, h: 22, style: 'wood' },
+                    { x: 1171, y: 570, w: 165, h: 22, style: 'wood' },
+
+                    { x: 430, y: 590, w: 500, h: 24, style: 'stone' },
+
+                    { x: 150, y: 380, w: 310, h: 24, style: 'grass' },
+                    { x: 900, y: 380, w: 310, h: 24, style: 'grass' },
+
+                    { x: 490, y: 280, w: 380, h: 24, style: 'wood' },
+
+                    { x: 24, y: 200, w: 250, h: 22, style: 'grass' },
+                    { x: 1086, y: 200, w: 250, h: 22, style: 'grass' },
+                    { x: 360, y: 135, w: 200, h: 22, style: 'stone' },
+                    { x: 800, y: 135, w: 200, h: 22, style: 'stone' }
+                ],
+                jumpPads: [
+                    { x: 205, y: 726, w: 68, h: 18, forceY: -1020 },
+                    { x: 1087, y: 726, w: 68, h: 18, forceY: -1020 }
+                ],
+                spawns: [
+                    { x: 100, y: 670 },
+                    { x: 1210, y: 670 }
+                ],
+                powerupSpawns: [
+                    { x: 680, y: 540 },
+                    { x: 680, y: 235 },
+                    { x: 260, y: 330 },
+                    { x: 1100, y: 330 }
+                ]
+            }
+        };
+
+        // ==========================================
+        // 3. GAME STATE & DYNAMIC CAMERA
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let selectedMapKey = 'classic';
+        let gameState = 'MENU'; // MENU, PLAYING, GAMEOVER
+        let roundDuration = 60.0;
+        let timeLeft = roundDuration;
+        let lastTimestamp = 0;
+
+        // Smooth Dynamic Camera State (Frames both players cleanly across XL arenas)
+        const camera = {
+            x: 960,
+            y: 540,
+            zoom: 0.75,
+            initialized: false
+        };
+
+        // Tag & Immunity Mechanics
+        let itPlayerIndex = 1; // 0 = P1, 1 = P2
+        let tagImmunityTimer = 0;
+        const TAG_IMMUNITY_DURATION = 1.5;
+
+        // Match Statistics
+        let totalTags = 0;
+        let p1SafeTime = 0;
+        let p2SafeTime = 0;
+        let lastCountdownInt = 10;
+
+        // Visual FX
+        let shakeTime = 0;
+        let shakeIntensity = 0;
+        let particles = [];
+        let floatingTexts = [];
+        let powerups = [];
+        let powerupSpawnTimer = 4.0;
+
+        // Decorative clouds per map
+        let clouds = [];
+
+        // Input State
+        const keys = {};
+        const justPressed = {};
+
+        // Player Factory (Cobalt Blue vs Coral Red)
+        function createPlayer(id, name, color, borderColor, x, y, controls) {
+            return {
+                id,
+                name,
+                color,
+                borderColor,
+                x,
+                y,
+                w: 40,
+                h: 40,
+                vx: 0,
+                vy: 0,
+                facing: id === 0 ? 1 : -1,
+                onGround: false,
+                jumpsLeft: 2,
+                dashCooldown: 0,
+                dashMaxCooldown: 2.2,
+                dashActiveTimer: 0,
+                dashDirX: 0,
+                dashDirY: 0,
+                speedBoostTimer: 0,
+                slowTimer: 0,
+                trailTimer: 0,
+                controls
+            };
+        }
+
+        let players = [];
+
+        function initPlayers() {
+            const map = MAPS[selectedMapKey];
+            players = [
+                createPlayer(0, 'P1', '#2563eb', '#1d4ed8', map.spawns[0].x, map.spawns[0].y, {
+                    left: ['KeyA'],
+                    right: ['KeyD'],
+                    up: ['KeyW'],
+                    down: ['KeyS'],
+                    dash: ['Space', 'ShiftLeft']
+                }),
+                createPlayer(1, 'P2', '#f43f5e', '#be123c', map.spawns[1].x, map.spawns[1].y, {
+                    left: ['ArrowLeft'],
+                    right: ['ArrowRight'],
+                    up: ['ArrowUp'],
+                    down: ['ArrowDown'],
+                    dash: ['Enter', 'ShiftRight']
+                })
+            ];
+
+            // Generate fluffy daytime clouds scaled to map width
+            clouds = [];
+            const cloudCount = Math.floor(map.worldW / 240);
+            for (let i = 0; i < cloudCount; i++) {
+                clouds.push({
+                    x: (i * 250) + Math.random() * 120,
+                    y: 70 + Math.random() * (map.worldH * 0.35),
+                    scale: 0.7 + Math.random() * 0.7,
+                    speed: 8 + Math.random() * 14
+                });
+            }
+
+            camera.initialized = false;
+        }
+
+        // ==========================================
+        // 4. INPUT HANDLING
+        // ==========================================
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+            }
+            if (!keys[e.code]) {
+                justPressed[e.code] = true;
+            }
+            keys[e.code] = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        document.querySelectorAll('.touch-btn').forEach(btn => {
+            const code = btn.getAttribute('data-key');
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!keys[code]) justPressed[code] = true;
+                keys[code] = true;
+            }, { passive: false });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[code] = false;
+            }, { passive: false });
+        });
+
+        function isActionDown(codeList) {
+            return codeList.some(code => keys[code]);
+        }
+
+        function isActionJustPressed(codeList) {
+            return codeList.some(code => justPressed[code]);
+        }
+
+        // ==========================================
+        // 5. PARTICLES & FLOATING TEXTS
+        // ==========================================
+        function spawnParticles(x, y, color, count = 12, speed = 250, life = 0.45) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const spd = (0.3 + Math.random() * 0.7) * speed;
+                particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * spd,
+                    vy: Math.sin(angle) * spd,
+                    size: 4 + Math.random() * 5,
+                    color,
+                    life,
+                    maxLife: life
+                });
+            }
+        }
+
+        function spawnFloatingText(x, y, text, color = '#d97706') {
+            floatingTexts.push({
+                x,
+                y,
+                text,
+                color,
+                life: 1.05,
+                maxLife: 1.05
+            });
+        }
+
+        function triggerScreenShake(intensity = 10, duration = 0.25) {
+            shakeIntensity = intensity;
+            shakeTime = duration;
+        }
+
+        // ==========================================
+        // 6. POWER-UPS SYSTEM
+        // ==========================================
+        const POWERUP_TYPES = [
+            { type: 'SPEED', icon: '⚡', bgColor: '#fef08a', borderColor: '#eab308', textColor: '#b45309', label: 'SPEED SURGE!' },
+            { type: 'FREEZE', icon: '❄️', bgColor: '#bae6fd', borderColor: '#0284c7', textColor: '#0369a1', label: 'RIVAL CHILLED!' },
+            { type: 'DASH', icon: '🛡️', bgColor: '#bbf7d0', borderColor: '#16a34a', textColor: '#15803d', label: 'DASH RECHARGED!' }
+        ];
+
+        function spawnPowerup() {
+            const map = MAPS[selectedMapKey];
+            if (!map.powerupSpawns || map.powerupSpawns.length === 0) return;
+            const maxActive = map.worldW > 1600 ? 3 : 2;
+            if (powerups.length >= maxActive) return;
+
+            const available = map.powerupSpawns.filter(sp =>
+                !powerups.some(p => Math.hypot(p.x - sp.x, p.y - sp.y) < 45)
+            );
+            if (available.length === 0) return;
+
+            const spot = available[Math.floor(Math.random() * available.length)];
+            const template = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+
+            powerups.push({
+                x: spot.x,
+                y: spot.y,
+                r: 20,
+                bobOffset: Math.random() * Math.PI * 2,
+                ...template
+            });
+        }
+
+        // ==========================================
+        // 7. PHYSICS & COLLISION ENGINE
+        // ==========================================
+        function rectIntersect(a, b) {
+            return a.x < b.x + b.w &&
+                   a.x + a.w > b.x &&
+                   a.y < b.y + b.h &&
+                   a.y + a.h > b.y;
+        }
+
+        function updatePlayer(p, dt, map) {
+            if (p.dashCooldown > 0) p.dashCooldown = Math.max(0, p.dashCooldown - dt);
+            if (p.speedBoostTimer > 0) p.speedBoostTimer = Math.max(0, p.speedBoostTimer - dt);
+            if (p.slowTimer > 0) p.slowTimer = Math.max(0, p.slowTimer - dt);
+
+            const isIt = (players[itPlayerIndex] === p);
+
+            let speedMult = isIt ? 1.07 : 1.0;
+            if (p.speedBoostTimer > 0) speedMult *= 1.45;
+            if (p.slowTimer > 0) speedMult *= 0.62;
+
+            const moveLeft = isActionDown(p.controls.left);
+            const moveRight = isActionDown(p.controls.right);
+            const moveUp = isActionDown(p.controls.up);
+            const moveDown = isActionDown(p.controls.down);
+            const jumpPressed = isActionJustPressed(p.controls.up);
+            const dashPressed = isActionJustPressed(p.controls.dash);
+
+            // Dash Trigger
+            if (dashPressed && p.dashCooldown <= 0 && p.dashActiveTimer <= 0) {
+                p.dashActiveTimer = 0.17;
+                p.dashCooldown = p.dashMaxCooldown;
+
+                let dx = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+                let dy = (moveDown ? 1 : 0) - (moveUp ? 1 : 0);
+
+                if (dx === 0 && dy === 0) {
+                    dx = p.facing;
+                } else {
+                    const len = Math.hypot(dx, dy);
+                    dx /= len;
+                    dy /= len;
+                }
+
+                p.dashDirX = dx;
+                p.dashDirY = dy;
+                sfx.playDash();
+                spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#ffffff', 14, 240, 0.35);
+            }
+
+            // Movement & Gravity
+            if (p.dashActiveTimer > 0) {
+                p.dashActiveTimer -= dt;
+                const dashSpeed = 1040;
+                p.vx = p.dashDirX * dashSpeed;
+                p.vy = p.dashDirY * dashSpeed;
+
+                p.trailTimer -= dt;
+                if (p.trailTimer <= 0) {
+                    p.trailTimer = 0.02;
+                    spawnParticles(p.x + p.w / 2, p.y + p.h / 2, isIt ? '#f59e0b' : p.color, 3, 70, 0.25);
+                }
+            } else {
+                const maxSpeed = 460 * speedMult;
+                const accel = p.onGround ? 3400 : 2300;
+                const friction = p.onGround ? 2900 : 800;
+
+                if (moveLeft && !moveRight) {
+                    p.vx = Math.max(-maxSpeed, p.vx - accel * dt);
+                    p.facing = -1;
+                } else if (moveRight && !moveLeft) {
+                    p.vx = Math.min(maxSpeed, p.vx + accel * dt);
+                    p.facing = 1;
+                } else {
+                    if (Math.abs(p.vx) <= friction * dt) {
+                        p.vx = 0;
+                    } else {
+                        p.vx -= Math.sign(p.vx) * friction * dt;
+                    }
+                }
+
+                const gravity = moveDown && !p.onGround ? 2650 : 1850;
+                p.vy = Math.min(1150, p.vy + gravity * dt);
+
+                if (jumpPressed && p.jumpsLeft > 0) {
+                    p.vy = p.jumpsLeft === 2 ? -710 : -640;
+                    p.jumpsLeft--;
+                    p.onGround = false;
+                    sfx.playJump(p.id * 45);
+                    spawnParticles(p.x + p.w / 2, p.y + p.h, '#ffffff', 9, 130, 0.28);
+                }
+            }
+
+            // Horizontal Move & Solid Collision
+            p.x += p.vx * dt;
+            for (const plat of map.platforms) {
+                if (rectIntersect(p, plat)) {
+                    if (p.vx > 0) {
+                        p.x = plat.x - p.w;
+                        p.vx = 0;
+                    } else if (p.vx < 0) {
+                        p.x = plat.x + plat.w;
+                        p.vx = 0;
+                    }
+                }
+            }
+
+            // Vertical Move & Solid Collision
+            p.y += p.vy * dt;
+            p.onGround = false;
+            for (const plat of map.platforms) {
+                if (rectIntersect(p, plat)) {
+                    if (p.vy > 0) {
+                        p.y = plat.y - p.h;
+                        p.vy = 0;
+                        p.onGround = true;
+                        p.jumpsLeft = 2;
+                    } else if (p.vy < 0) {
+                        p.y = plat.y + plat.h;
+                        p.vy = 0;
+                    }
+                }
+            }
+
+            // Jump Pads Collision
+            for (const pad of map.jumpPads) {
+                if (rectIntersect(p, pad)) {
+                    p.vy = pad.forceY;
+                    p.onGround = false;
+                    p.jumpsLeft = 2;
+                    sfx.playBounce();
+                    spawnParticles(pad.x + pad.w / 2, pad.y, '#10b981', 16, 260, 0.42);
+                }
+            }
+
+            // Powerups Collection
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const pu = powerups[i];
+                const dist = Math.hypot((p.x + p.w / 2) - pu.x, (p.y + p.h / 2) - pu.y);
+                if (dist < p.w / 2 + pu.r + 8) {
+                    sfx.playPowerup();
+                    spawnParticles(pu.x, pu.y, pu.borderColor, 18, 220, 0.45);
+                    spawnFloatingText(pu.x, pu.y - 22, pu.label, pu.textColor);
+
+                    const rival = players[1 - p.id];
+                    if (pu.type === 'SPEED') {
+                        p.speedBoostTimer = 4.5;
+                    } else if (pu.type === 'FREEZE') {
+                        rival.slowTimer = 3.5;
+                        spawnFloatingText(rival.x + rival.w / 2, rival.y - 24, 'SLOWED!', '#0284c7');
+                    } else if (pu.type === 'DASH') {
+                        p.dashCooldown = 0;
+                    }
+
+                    powerups.splice(i, 1);
+                }
+            }
+        }
+
+        function checkTagCollision() {
+            if (tagImmunityTimer > 0) return;
+
+            const p1 = players[0];
+            const p2 = players[1];
+
+            if (rectIntersect(p1, p2)) {
+                const previousIt = players[itPlayerIndex];
+                itPlayerIndex = 1 - itPlayerIndex;
+                const newIt = players[itPlayerIndex];
+
+                tagImmunityTimer = TAG_IMMUNITY_DURATION;
+                totalTags++;
+
+                const dx = (newIt.x + newIt.w / 2) - (previousIt.x + previousIt.w / 2);
+                const dy = (newIt.y + newIt.h / 2) - (previousIt.y + previousIt.h / 2);
+                const len = Math.max(1, Math.hypot(dx, dy));
+                const nx = dx / len;
+                const ny = dy / len;
+
+                newIt.vx = nx * 560;
+                newIt.vy = Math.min(-280, ny * 440);
+                previousIt.vx = -nx * 560;
+                previousIt.vy = Math.min(-280, -ny * 440);
+
+                newIt.dashCooldown = Math.min(newIt.dashCooldown, 0.5);
+
+                sfx.playTag();
+                triggerScreenShake(12, 0.28);
+
+                const midX = (p1.x + p2.x + p1.w) / 2;
+                const midY = (p1.y + p2.y + p1.h) / 2;
+                spawnParticles(midX, midY, '#f59e0b', 28, 380, 0.55);
+                spawnFloatingText(midX, midY - 32, 'TAGGED!', '#d97706');
+
+                updateHUD();
+            }
+        }
+
+        // ==========================================
+        // 8. DYNAMIC CAMERA SYSTEM (Smooth Zoom & Pan)
+        // ==========================================
+        function updateCamera(dt) {
+            const map = MAPS[selectedMapKey];
+            const cw = canvas.width;
+            const ch = canvas.height;
+            if (cw === 0 || ch === 0 || players.length < 2) return;
+
+            const p1 = players[0];
+            const p2 = players[1];
+
+            // Midpoint between both players
+            const midX = (p1.x + p1.w / 2 + p2.x + p2.w / 2) / 2;
+            const midY = (p1.y + p1.h / 2 + p2.y + p2.h / 2) / 2;
+
+            // Bounding box spanning both players with generous framing margins
+            const distX = Math.abs((p1.x + p1.w / 2) - (p2.x + p2.w / 2));
+            const distY = Math.abs((p1.y + p1.h / 2) - (p2.y + p2.h / 2));
+
+            const padX = 460;
+            const padY = 340;
+            const reqW = distX + padX;
+            const reqH = distY + padY;
+
+            // Minimum zoom shows the entire world cleanly; max zoom frames close-up duels nicely
+            const minZoom = Math.min(cw / map.worldW, ch / map.worldH);
+            const maxZoom = Math.max(minZoom, Math.min(cw / 980, ch / 620));
+
+            let targetZoom = Math.min(cw / reqW, ch / reqH);
+            targetZoom = Math.max(minZoom, Math.min(maxZoom, targetZoom));
+
+            // Clamp camera center so the viewport never scrolls past the arena edges
+            const halfVisW = (cw / targetZoom) / 2;
+            const halfVisH = (ch / targetZoom) / 2;
+
+            let targetX = midX;
+            let targetY = midY;
+
+            if (halfVisW * 2 >= map.worldW) {
+                targetX = map.worldW / 2;
+            } else {
+                targetX = Math.max(halfVisW, Math.min(map.worldW - halfVisW, targetX));
+            }
+
+            if (halfVisH * 2 >= map.worldH) {
+                targetY = map.worldH / 2;
+            } else {
+                targetY = Math.max(halfVisH, Math.min(map.worldH - halfVisH, targetY));
+            }
+
+            if (!camera.initialized || dt <= 0) {
+                camera.x = targetX;
+                camera.y = targetY;
+                camera.zoom = targetZoom;
+                camera.initialized = true;
+            } else {
+                const smooth = 1 - Math.exp(-7.5 * dt);
+                camera.x += (targetX - camera.x) * smooth;
+                camera.y += (targetY - camera.y) * smooth;
+                camera.zoom += (targetZoom - camera.zoom) * smooth;
+            }
+        }
+
+        // ==========================================
+        // 9. HUD & UI UPDATES
+        // ==========================================
+        const timerDisplay = document.getElementById('timer-display');
+        const timerBox = document.getElementById('timer-box');
+        const p1Hud = document.getElementById('p1-hud');
+        const p2Hud = document.getElementById('p2-hud');
+        const p1Badge = document.getElementById('p1-status-badge');
+        const p2Badge = document.getElementById('p2-status-badge');
+        const p1Crown = document.getElementById('p1-it-crown');
+        const p2Crown = document.getElementById('p2-it-crown');
+        const p1DashBar = document.getElementById('p1-dash-bar');
+        const p2DashBar = document.getElementById('p2-dash-bar');
+        const p1EffectLabel = document.getElementById('p1-effect-label');
+        const p2EffectLabel = document.getElementById('p2-effect-label');
+
+        function updateHUD() {
+            if (players.length < 2) return;
+
+            timerDisplay.textContent = Math.max(0, timeLeft).toFixed(1);
+            if (timeLeft <= 10.0) {
+                timerDisplay.classList.add('text-rose-600');
+                timerBox.classList.add('border-rose-400', 'bg-rose-50');
+            } else {
+                timerDisplay.classList.remove('text-rose-600');
+                timerBox.classList.remove('border-rose-400', 'bg-rose-50');
+            }
+
+            const p1IsIt = (itPlayerIndex === 0);
+            if (p1IsIt) {
+                p1Hud.classList.add('ring-it', 'it-badge-anim');
+                p2Hud.classList.remove('ring-it', 'it-badge-anim');
+
+                p1Badge.textContent = tagImmunityTimer > 0 ? 'WAIT...' : 'IT!';
+                p1Badge.className = 'text-[10px] sm:text-xs font-arcade font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-400';
+
+                p2Badge.textContent = 'SAFE';
+                p2Badge.className = 'text-[10px] sm:text-xs font-arcade font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300';
+
+                p1Crown.classList.remove('hidden');
+                p2Crown.classList.add('hidden');
+            } else {
+                p2Hud.classList.add('ring-it', 'it-badge-anim');
+                p1Hud.classList.remove('ring-it', 'it-badge-anim');
+
+                p2Badge.textContent = tagImmunityTimer > 0 ? 'WAIT...' : 'IT!';
+                p2Badge.className = 'text-[10px] sm:text-xs font-arcade font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-400';
+
+                p1Badge.textContent = 'SAFE';
+                p1Badge.className = 'text-[10px] sm:text-xs font-arcade font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300';
+
+                p2Crown.classList.remove('hidden');
+                p1Crown.classList.add('hidden');
+            }
+
+            const p1Pct = ((players[0].dashMaxCooldown - players[0].dashCooldown) / players[0].dashMaxCooldown) * 100;
+            const p2Pct = ((players[1].dashMaxCooldown - players[1].dashCooldown) / players[1].dashMaxCooldown) * 100;
+            p1DashBar.style.width = `${p1Pct}%`;
+            p2DashBar.style.width = `${p2Pct}%`;
+
+            p1EffectLabel.textContent = players[0].speedBoostTimer > 0 ? '⚡FAST' : (players[0].slowTimer > 0 ? '❄️SLOW' : '');
+            p2EffectLabel.textContent = players[1].speedBoostTimer > 0 ? '⚡FAST' : (players[1].slowTimer > 0 ? '❄️SLOW' : '');
+        }
+
+        // ==========================================
+        // 10. DAYLIGHT RENDERING ENGINE
+        // ==========================================
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            updateCamera(0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawRoundedRect(ctx, x, y, w, h, r) {
+            const radius = Math.min(r, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + w - radius, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+            ctx.lineTo(x + w, y + h - radius);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+            ctx.lineTo(x + radius, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function drawCloud(ctx, x, y, scale) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.scale(scale, scale);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 28, 0, Math.PI * 2);
+            ctx.arc(26, -8, 34, 0, Math.PI * 2);
+            ctx.arc(58, 0, 26, 0, Math.PI * 2);
+            ctx.arc(28, 12, 24, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function renderPlatform(ctx, plat) {
+            ctx.save();
+            // Subtle crisp drop shadow underneath platforms
+            if (plat.style !== 'wall' && plat.style !== 'ground') {
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.12)';
+                drawRoundedRect(ctx, plat.x + 3, plat.y + 6, plat.w, plat.h, 8);
+                ctx.fill();
+            }
+
+            if (plat.style === 'grass' || plat.style === 'ground') {
+                // Warm earth/stone base with lush green turf cap
+                ctx.fillStyle = plat.style === 'ground' ? '#78716c' : '#a8a29e';
+                drawRoundedRect(ctx, plat.x, plat.y, plat.w, plat.h, plat.style === 'ground' ? 0 : 8);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#57534e';
+                ctx.stroke();
+
+                // Lush turf layer on top
+                ctx.fillStyle = '#22c55e';
+                drawRoundedRect(ctx, plat.x, plat.y, plat.w, Math.min(12, plat.h * 0.45), plat.style === 'ground' ? 0 : 6);
+                ctx.fill();
+                ctx.fillStyle = '#4ade80';
+                ctx.fillRect(plat.x + 4, plat.y + 2, plat.w - 8, 3);
+            } else if (plat.style === 'wood') {
+                // Sunlit timber bridge planks
+                ctx.fillStyle = '#d97706';
+                drawRoundedRect(ctx, plat.x, plat.y, plat.w, plat.h, 7);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#92400e';
+                ctx.stroke();
+
+                // Top highlight plank
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(plat.x + 4, plat.y + 2, plat.w - 8, 5);
+            } else if (plat.style === 'sky') {
+                // Crisp sunlit alabaster sky-tile with azure trim
+                ctx.fillStyle = '#ffffff';
+                drawRoundedRect(ctx, plat.x, plat.y, plat.w, plat.h, 9);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#7dd3fc';
+                ctx.stroke();
+
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillRect(plat.x + 6, plat.y + 2, plat.w - 12, 4);
+            } else {
+                // Carved daylight sandstone / limestone blocks & boundary walls
+                ctx.fillStyle = '#cbd5e1';
+                drawRoundedRect(ctx, plat.x, plat.y, plat.w, plat.h, plat.style === 'wall' ? 0 : 7);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#64748b';
+                ctx.stroke();
+
+                if (plat.style !== 'wall') {
+                    ctx.fillStyle = '#f1f5f9';
+                    ctx.fillRect(plat.x + 4, plat.y + 2, plat.w - 8, 4);
+                }
+            }
+            ctx.restore();
+        }
+
+        function render() {
+            const cw = canvas.width;
+            const ch = canvas.height;
+            const map = MAPS[selectedMapKey];
+
+            // 1. Full-Viewport Daylight Sky Backdrop
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, ch);
+            skyGrad.addColorStop(0, map.theme.skyTop);
+            skyGrad.addColorStop(1, map.theme.skyBottom);
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, cw, ch);
+
+            // Warm Daylight Sun in upper sky
+            ctx.save();
+            const sunX = cw * 0.82;
+            const sunY = ch * 0.16;
+            const sunHalo = ctx.createRadialGradient(sunX, sunY, 15, sunX, sunY, 130);
+            sunHalo.addColorStop(0, map.theme.sunColor);
+            sunHalo.addColorStop(1, 'rgba(254, 240, 138, 0)');
+            ctx.fillStyle = sunHalo;
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, 130, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#fef9c3';
+            ctx.beginPath();
+            ctx.arc(sunX, sunY, 34, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Apply Dynamic Camera Transform
+            ctx.save();
+            ctx.translate(cw / 2, ch / 2);
+            ctx.scale(camera.zoom, camera.zoom);
+            ctx.translate(-camera.x, -camera.y);
+
+            if (shakeTime > 0) {
+                const sx = (Math.random() - 0.5) * shakeIntensity * 2;
+                const sy = (Math.random() - 0.5) * shakeIntensity * 2;
+                ctx.translate(sx, sy);
+            }
+
+            // 2. Arena Sky & Rolling Daylight Hills Parallax
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+            ctx.fillRect(0, 0, map.worldW, map.worldH);
+
+            // Drifting Daylight Clouds
+            for (const c of clouds) {
+                drawCloud(ctx, c.x, c.y, c.scale);
+            }
+
+            // Rolling Distant Hills along the bottom of the arena
+            ctx.fillStyle = map.theme.hillNear;
+            ctx.beginPath();
+            ctx.moveTo(0, map.worldH);
+            const hillSteps = 6;
+            const segW = map.worldW / hillSteps;
+            for (let i = 0; i <= hillSteps; i++) {
+                const hx = i * segW;
+                const hy = map.worldH - 130 - Math.sin(i * 1.4 + 0.5) * 65;
+                if (i === 0) ctx.lineTo(hx, hy);
+                else ctx.quadraticCurveTo(hx - segW / 2, hy - 45, hx, hy);
+            }
+            ctx.lineTo(map.worldW, map.worldH);
+            ctx.closePath();
+            ctx.fill();
+
+            // 3. Render Platforms
+            for (const plat of map.platforms) {
+                renderPlatform(ctx, plat);
+            }
+
+            // 4. Render Jump Pads (Crisp Emerald & Gold Bounce Springs)
+            const pulse = Math.sin(performance.now() * 0.008) * 3;
+            for (const pad of map.jumpPads) {
+                ctx.save();
+                ctx.fillStyle = '#10b981';
+                drawRoundedRect(ctx, pad.x, pad.y - pulse * 0.4, pad.w, pad.h + pulse * 0.4, 6);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#047857';
+                ctx.stroke();
+
+                // Crisp upward chevron indicator
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(pad.x + pad.w * 0.3, pad.y - 7 - pulse);
+                ctx.lineTo(pad.x + pad.w * 0.5, pad.y - 15 - pulse);
+                ctx.lineTo(pad.x + pad.w * 0.7, pad.y - 7 - pulse);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // 5. Render Power-Ups (Crisp Sunlit Badges)
+            for (const pu of powerups) {
+                const bob = Math.sin(performance.now() * 0.005 + pu.bobOffset) * 5;
+                ctx.save();
+                ctx.translate(pu.x, pu.y + bob);
+
+                // Soft shadow
+                ctx.beginPath();
+                ctx.arc(2, 4, pu.r + 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.15)';
+                ctx.fill();
+
+                // Badge circle
+                ctx.beginPath();
+                ctx.arc(0, 0, pu.r + 2, 0, Math.PI * 2);
+                ctx.fillStyle = pu.bgColor;
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = pu.borderColor;
+                ctx.stroke();
+
+                ctx.font = '21px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(pu.icon, 0, 1);
+                ctx.restore();
+            }
+
+            // 6. Render Players (High-Contrast Cobalt Blue vs Coral Red)
+            players.forEach((p, idx) => {
+                const isIt = (idx === itPlayerIndex);
+                const cx = p.x + p.w / 2;
+                const cy = p.y + p.h / 2;
+
+                ctx.save();
+
+                // Grounded drop shadow
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.18)';
+                drawRoundedRect(ctx, p.x + 3, p.y + 5, p.w, p.h, 11);
+                ctx.fill();
+
+                // If "IT", draw crisp golden dashed indicator ring & crown
+                if (isIt) {
+                    const ringRadius = 35 + Math.sin(performance.now() * 0.012) * 4;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = tagImmunityTimer > 0 ? 'rgba(217, 119, 6, 0.45)' : '#f59e0b';
+                    ctx.lineWidth = 3.5;
+                    ctx.setLineDash([9, 6]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Player Body
+                ctx.fillStyle = p.color;
+                drawRoundedRect(ctx, p.x, p.y, p.w, p.h, 11);
+                ctx.fill();
+
+                // Crisp white/gold border
+                ctx.lineWidth = isIt ? 3.5 : 2.5;
+                ctx.strokeStyle = isIt ? '#facc15' : '#ffffff';
+                ctx.stroke();
+
+                // Expressive Eyes
+                const eyeOffsetX = p.facing * 5;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(cx - 7 + eyeOffsetX, cy - 3, 5.2, 0, Math.PI * 2);
+                ctx.arc(cx + 7 + eyeOffsetX, cy - 3, 5.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(cx - 6 + eyeOffsetX + p.facing * 1.5, cy - 3, 2.6, 0, Math.PI * 2);
+                ctx.arc(cx + 8 + eyeOffsetX + p.facing * 1.5, cy - 3, 2.6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Frost ring if slowed
+                if (p.slowTimer > 0) {
+                    ctx.strokeStyle = '#0284c7';
+                    ctx.lineWidth = 3.5;
+                    drawRoundedRect(ctx, p.x - 4, p.y - 4, p.w + 8, p.h + 8, 13);
+                    ctx.stroke();
+                }
+
+                // Floating Crown / Name Tag above head
+                ctx.textAlign = 'center';
+                if (isIt) {
+                    ctx.font = '20px sans-serif';
+                    ctx.fillText('👑', cx, p.y - 14);
+                    ctx.font = 'bold 13px Fredoka, sans-serif';
+                    ctx.fillStyle = '#b45309';
+                    ctx.fillText(tagImmunityTimer > 0 ? `WAIT ${tagImmunityTimer.toFixed(1)}s` : 'IT!', cx, p.y - 34);
+                } else {
+                    ctx.font = 'bold 13px Fredoka, sans-serif';
+                    ctx.fillStyle = p.borderColor;
+                    ctx.fillText(p.name, cx, p.y - 10);
+                }
+
+                ctx.restore();
+            });
+
+            // 7. Render Particles
+            for (const pt of particles) {
+                const alpha = Math.max(0, pt.life / pt.maxLife);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = pt.color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 8. Render Floating Combat/Powerup Callouts
+            for (const ft of floatingTexts) {
+                const alpha = Math.max(0, ft.life / ft.maxLife);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.font = 'bold 20px Fredoka, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#ffffff';
+                ctx.strokeText(ft.text, ft.x, ft.y);
+                ctx.fillStyle = ft.color;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            }
+
+            ctx.restore();
+        }
+
+        // ==========================================
+        // 11. MAIN GAME LOOP
+        // ==========================================
+        function update(dt) {
+            const map = MAPS[selectedMapKey];
+
+            // Drift clouds gently even on menu backdrop
+            for (const c of clouds) {
+                c.x += c.speed * dt;
+                if (c.x > map.worldW + 120) c.x = -120;
+            }
+
+            if (gameState !== 'PLAYING') {
+                updateCamera(dt);
+                return;
+            }
+
+            timeLeft -= dt;
+            if (timeLeft <= 10 && Math.ceil(timeLeft) < lastCountdownInt && timeLeft > 0) {
+                lastCountdownInt = Math.ceil(timeLeft);
+                sfx.playCountdownTick(false);
+            }
+
+            if (timeLeft <= 0) {
+                timeLeft = 0;
+                sfx.playCountdownTick(true);
+                endMatch();
+                return;
+            }
+
+            if (itPlayerIndex === 0) {
+                p2SafeTime += dt;
+            } else {
+                p1SafeTime += dt;
+            }
+
+            if (tagImmunityTimer > 0) {
+                tagImmunityTimer = Math.max(0, tagImmunityTimer - dt);
+            }
+
+            if (shakeTime > 0) {
+                shakeTime = Math.max(0, shakeTime - dt);
+            }
+
+            powerupSpawnTimer -= dt;
+            if (powerupSpawnTimer <= 0) {
+                spawnPowerup();
+                powerupSpawnTimer = 6.0;
+            }
+
+            for (const p of players) {
+                updatePlayer(p, dt, map);
+            }
+
+            checkTagCollision();
+            updateCamera(dt);
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const pt = particles[i];
+                pt.x += pt.vx * dt;
+                pt.y += pt.vy * dt;
+                pt.life -= dt;
+                if (pt.life <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 48 * dt;
+                ft.life -= dt;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            updateHUD();
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+            lastTimestamp = timestamp;
+
+            update(dt);
+            render();
+
+            for (const k in justPressed) {
+                justPressed[k] = false;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==========================================
+        // 12. MATCH FLOW & UI EVENT LISTENERS
+        // ==========================================
+        const startScreen = document.getElementById('start-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const mapNameBadge = document.getElementById('map-name-badge');
+
+        function startMatch() {
+            sfx.init();
+            timeLeft = roundDuration;
+            lastCountdownInt = 10;
+            tagImmunityTimer = 1.0;
+            totalTags = 0;
+            p1SafeTime = 0;
+            p2SafeTime = 0;
+            particles = [];
+            floatingTexts = [];
+            powerups = [];
+            powerupSpawnTimer = 2.5;
+
+            itPlayerIndex = Math.random() < 0.5 ? 0 : 1;
+
+            initPlayers();
+            updateCamera(0);
+            mapNameBadge.textContent = MAPS[selectedMapKey].name.toUpperCase();
+
+            startScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+            gameState = 'PLAYING';
+            updateHUD();
+
+            const starter = players[itPlayerIndex];
+            spawnFloatingText(starter.x + starter.w / 2, starter.y - 38, `${starter.name} IS IT!`, '#d97706');
+        }
+
+        function endMatch() {
+            gameState = 'GAMEOVER';
+            updateHUD();
+
+            const winnerIndex = 1 - itPlayerIndex;
+            const winnerTitle = document.getElementById('winner-title');
+            const winnerSubtitle = document.getElementById('winner-subtitle');
+
+            if (winnerIndex === 0) {
+                winnerTitle.textContent = 'PLAYER 1 WINS!';
+                winnerTitle.className = 'font-arcade font-bold text-3xl sm:text-4xl text-blue-600 mb-2';
+                winnerSubtitle.textContent = 'Cobalt outran Coral when the clock hit zero!';
+            } else {
+                winnerTitle.textContent = 'PLAYER 2 WINS!';
+                winnerTitle.className = 'font-arcade font-bold text-3xl sm:text-4xl text-rose-500 mb-2';
+                winnerSubtitle.textContent = 'Coral dodged Cobalt when the clock hit zero!';
+            }
+
+            document.getElementById('stat-tags').textContent = totalTags;
+            document.getElementById('stat-p1-safe').textContent = `${p1SafeTime.toFixed(1)}s`;
+            document.getElementById('stat-p2-safe').textContent = `${p2SafeTime.toFixed(1)}s`;
+
+            gameoverScreen.classList.remove('hidden');
+        }
+
+        document.querySelectorAll('.map-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.map-card').forEach(c => {
+                    c.classList.remove('border-blue-500', 'bg-blue-50');
+                    c.classList.add('border-slate-200', 'bg-slate-50');
+                });
+                card.classList.remove('border-slate-200', 'bg-slate-50');
+                card.classList.add('border-blue-500', 'bg-blue-50');
+                selectedMapKey = card.getAttribute('data-map');
+                initPlayers();
+                updateCamera(0);
+            });
+        });
+
+        document.getElementById('start-btn').addEventListener('click', startMatch);
+        document.getElementById('play-again-btn').addEventListener('click', startMatch);
+
+        document.getElementById('change-map-btn').addEventListener('click', () => {
+            gameoverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            gameState = 'MENU';
+        });
+
+        document.getElementById('pause-menu-btn').addEventListener('click', () => {
+            gameState = 'MENU';
+            gameoverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+
+        document.getElementById('mute-btn').addEventListener('click', () => {
+            const isMuted = sfx.toggleMute();
+            document.getElementById('mute-icon').textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        window.onload = function () {
+            resizeCanvas();
+            initPlayers();
+            updateCamera(0);
+            updateHUD();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
